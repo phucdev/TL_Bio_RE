@@ -1,18 +1,10 @@
+import pandas as pd
 from typing import List
 from tlbiore.data.corpus import Span
 from sklearn.model_selection import train_test_split
 
 
 class SpanUtils:
-    @staticmethod
-    def get_spans(char_offset):
-        spans = []
-        for span in char_offset.split(','):
-            limits = span.split('-')
-            start = int(limits[0])
-            end = int(limits[1]) + 1
-            spans.append(Span(start, end))
-        return spans
 
     @staticmethod
     def equals(span_a: Span, span_b: Span):
@@ -34,18 +26,12 @@ class SpanUtils:
                     return True     # TODO or return all the intersecting span pairs?
         return False
 
-
-def get_span(entity_no, spans):
-    span_tuples = []
-    for span in spans.split(','):
-        limits = span.split('-')
-        start = int(limits[0])
-        end = int(limits[1]) + 1
-        span_tuples.append((entity_no, start, end))
-    return span_tuples
+    @staticmethod
+    def get_span_with_no(entity_no: int, spans: List[Span]):
+        return [(entity_no, span.start, span.end) for span in spans]
 
 
-def split_sentence(span_list, sentence, include_entities=False):
+def split_sentence(span_list, sentence: str, include_entities=False):
     """
     Returns sentence blocks that are not to be replaced.
     """
@@ -60,13 +46,26 @@ def split_sentence(span_list, sentence, include_entities=False):
     return sentence_array
 
 
-def train_dev_test_split(df, split_ratio=(0.8, 0.1, 0.1)):
+def train_dev_test_split(object_list, split_ratio=(0.8, 0.1, 0.1)):
+    """
+    Performs train, dev, test split on a list
+    :param object_list: list of documents, sentences or pairs
+    :param split_ratio: train, dev, test ratio
+    :return: train, dev, test
+    """
     train_size, dev_size, test_size = split_ratio
-    # TODO split at sentence level
-    # TODO using stratify option requires separate label data frame
-    train, tmp = train_test_split(df, random_state=2018, train_size=train_size)
+    train, tmp = train_test_split(object_list, random_state=2018, train_size=train_size)
     dev, test = train_test_split(tmp, random_state=2018, test_size=test_size / (test_size + dev_size))
-    return train, dev, test
+
+    if isinstance(train, pd.DataFrame) and isinstance(dev, pd.DataFrame) and isinstance(test, pd.DataFrame):
+        return train, dev, test
+    else:
+        # TODO: add checks that train, dev, test are lists of documents or sentences
+        train_examples = pd.concat([elem.get_examples() for elem in train]).reset_index(drop=True)
+        dev_examples = pd.concat([elem.get_examples() for elem in dev]).reset_index(drop=True)
+        test_examples = pd.concat([elem.get_examples() for elem in test]).reset_index(drop=True)
+
+        return train_examples, dev_examples, test_examples
 
 
 def export_tsv(df, out):
