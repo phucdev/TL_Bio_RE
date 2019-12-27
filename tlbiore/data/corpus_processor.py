@@ -1,5 +1,3 @@
-import os
-
 import pandas as pd
 from lxml import etree
 
@@ -13,8 +11,6 @@ def get_char_offset(entities, e_id):
 
 
 def process_corpus(xml_file):
-    d_id = []  # document id
-    s_id = []  # sentence id for grouping and train-dev-test split later on
     p_id = []  # pair id
     label = []  # interaction
     sentence = []  # sentence text
@@ -22,11 +18,10 @@ def process_corpus(xml_file):
     e2_span = []  # e2 charOffset
 
     for _, doc in etree.iterparse(xml_file, events=("end",), tag='document'):
+        # d_id.append(doc.attrib['id'])
         for sent in doc:
             entities = sent.findall('entity')
             for pair in sent.findall('pair'):
-                d_id.append(doc.attrib['id'])
-                s_id.append(sent.attrib['id'])
                 attributes = pair.attrib
                 p_id.append(attributes['id'])
                 if attributes['interaction'] == 'True':
@@ -39,7 +34,7 @@ def process_corpus(xml_file):
             sent.clear()
         doc.clear()
 
-    d = {'d_id': d_id, 's_id': s_id, 'p_id': p_id,
+    d = {'p_id': p_id,
          'sentence': sentence, 'label': label,
          'e1_span': e1_span, 'e2_span': e2_span}
     df = pd.DataFrame(data=d)
