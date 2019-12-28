@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 from typing import List
 from tlbiore.data.corpus import Span
 from sklearn.model_selection import train_test_split
@@ -54,6 +55,7 @@ def train_dev_test_split(object_list, split_ratio=(0.8, 0.1, 0.1)):
     :return: train, dev, test
     """
     train_size, dev_size, test_size = split_ratio
+    # TODO: add stratify option for split on pair level, investigate same option for document/sentence level?
     train, tmp = train_test_split(object_list, random_state=2018, train_size=train_size)
     dev, test = train_test_split(tmp, random_state=2018, test_size=test_size / (test_size + dev_size))
 
@@ -74,4 +76,5 @@ def export_tsv(df, out):
     Then exports to out path
     """
     data = df.copy()[['p_id', 'sentence', 'label']]
+    os.makedirs(os.path.dirname(out), exist_ok=True)
     data.to_csv(out, sep='\t', index=False, header=False)
