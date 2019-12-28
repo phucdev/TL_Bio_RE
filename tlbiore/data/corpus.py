@@ -119,7 +119,9 @@ class Corpus:
         self.documents.append(document)
 
     def get_sentences(self):
-        sentences = [document.get_sentences() for document in self.documents]
+        sentences = []
+        for document in self.documents:
+            sentences.extend(document.get_sentences())
         return sentences
 
     def get_examples(self):
