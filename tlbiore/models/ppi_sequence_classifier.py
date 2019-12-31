@@ -1,7 +1,8 @@
-from collections import OrderedDict
-
 import torch
-import torch.nn as nn
+from torch import nn
+import pytorch_lightning as pl
+from pytorch_lightning.callbacks import EarlyStopping
+
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 from keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
@@ -22,6 +23,8 @@ BIO_BERT = '/content/drive/My Drive/TransferLearning/biobert_v1.1._pubmed'
 LIN_DIRECTORY = '/content/drive/My Drive/TransferLearning/Trainingsdaten/lin'
 LEE_DIRECTORY = '/content/drive/My Drive/TransferLearning/Trainingsdaten/lee'
 ALI_DIRECTORY = '/content/drive/My Drive/TransferLearning/Trainingsdaten/ali'
+E1_MARKER_ID = 1002     # "$" is 1002, "#" is 1001
+E2_MARKER_ID = 1001
 
 
 def preprocess(tokenizer: BertTokenizer, x: pd.DataFrame):
@@ -58,9 +61,9 @@ def get_dataloader(data_directory):
 
     # Import BERT tokenizer
     tokenizer = BertTokenizer.from_pretrained(BIO_BERT, do_lower_case=True)
-    special_tokens_dict = {'additional_special_tokens': ['@PROTEIN1$', '@PROTEIN2$', 'ps', 'pe']}
-    num_added_tokens = tokenizer.add_special_tokens(special_tokens_dict)
-    print('Added {} tokens'.format(num_added_tokens))
+    # special_tokens_dict = {'additional_special_tokens': ['@PROTEIN1$', '@PROTEIN2$', 'ps', 'pe']}
+    # num_added_tokens = tokenizer.add_special_tokens(special_tokens_dict)
+    # print('Added {} tokens'.format(num_added_tokens))
 
     # Create an iterator of our data with torch DataLoader. This helps save on memory during training because,
     # unlike a for loop, with an iterator the entire data set does not need to be loaded into memory
@@ -77,7 +80,7 @@ def get_dataloader(data_directory):
     return train_dataloader, dev_dataloader, test_dataloader
 
 
-class Model(nn.Module):
+class Model(pl.LightningModule):
 
     def __init__(self):
         super(Model, self).__init__()
@@ -86,50 +89,57 @@ class Model(nn.Module):
         #  https://medium.com/swlh/painless-fine-tuning-of-bert-in-pytorch-b91c14912caa?
         #  to add layers for ALI method
 
-        # Lee, Lin
-        model = BertForSequenceClassification.from_pretrained(BIO_BERT, num_labels=2)
-        model.cuda()    # TODO: device
-        # model.resize_token_embeddings(len(tokenizer))   # TODO: resize
-        self.model = model
-
-        self.optimizer = configure_optimizers(model)
-
-        """
-        # Ali
-        self.bert_layer = BertModel.from_pretrained(BIO_BERT)
+        # use pretrained BERT
+        self.bert = BertModel.from_pretrained(BIO_BERT, output_attentions=True)
 
         # TODO: check number of input features, add layer for combination of the 3, softmax etc.
-        self.cls_layer = nn.Linear(768, 1)
-        self.e1_layer = nn.Linear(768, 1)
-        self.e2_layer = nn.Linear(768, 1)
-        """
+        # fine tuner
+        self.cls_layer = nn.Linear(self.bert.config.hidden_size, 1)
+        self.e1_layer = nn.Linear(self.bert.config.hidden_size, 1)
+        self.e2_layer = nn.Linear(self.bert.config.hidden_size, 1)
+        self.concat_layer = nn.Linear(self.bert.config.hidden_size*3, 1)
 
         train_dataloader, val_dataloader, test_dataloader = get_dataloader(LIN_DIRECTORY)
         self._train_dataloader = train_dataloader
         self._val_dataloader = val_dataloader
         self._test_dataloader = test_dataloader
 
-    """
-    def forward(self, seq, attn_masks):
+    def forward(self, input_ids, attention_mask):
 
         # Feeding the input to BERT model to obtain contextualized representations
-        cont_reps, _= self.bert_layer(seq, attention_mask=attn_masks)
+        cont_reps, _ = self.bert(input_ids=input_ids, attention_mask=attention_mask)
     
         # Obtaining the representation of [CLS] head
         cls_rep = cont_reps[:, 0]
-        
-        # TODO get position of entities & positional markers in input_ids
+
+        def get_span_rep(marker_id, include_markers=True):
+            search_list = np.asarray(input_ids)
+            indices = np.where(search_list == marker_id)
+            assert len(indices) % 2 == 0    # if that fails, we need to choose different positional markers
+
+            rep = np.zeros_like(cls_rep)
+            indices_pairs = indices.reshape(-1, 2)   # make start-end pairs
+            for pair in indices_pairs:
+                if not include_markers:
+                    rep += np.average(cont_reps[:, pair[0]+1:pair[1]])
+                else:
+                    rep += np.average(cont_reps[:, pair[0]:pair[1]+1])
+            rep /= len(indices_pairs)   # average to account for split entity
+            return rep
+
         # Obtaining the representation of e1
-        e1_rep = cont_reps[:, 0]
+
+        e1_rep = get_span_rep(E1_MARKER_ID)
 
         # Obtaining the representation of e2
-        e2_rep = cont_reps[:, 0]
+        e2_rep = get_span_rep(E2_MARKER_ID)
+
+
     
         # Feeding cls_rep to the classifier layer
         logits = self.cls_layer(cls_rep)
     
         return logits
-    """
 
 
 def configure_optimizers(model):
@@ -146,16 +156,14 @@ def configure_optimizers(model):
     return optimizer
 
 
-def train(model, optimizer, train_dataloader, dev_dataloader):
+def train(model, optimizer, train_dataloader, dev_dataloader, args: utils.Arguments):    # TODO: args as named tuple/dict
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Store our loss and accuracy for plotting
     train_loss_set = []
 
-    epochs = 4
-
     # trange is a tqdm wrapper around the normal python range
-    for _ in trange(epochs, desc="Epoch"):
+    for _ in trange(args.epochs, desc="Epoch"):
 
         # Training
 
@@ -169,7 +177,7 @@ def train(model, optimizer, train_dataloader, dev_dataloader):
         # Train the data for one epoch
         for step, batch in enumerate(train_dataloader):
             # Add batch to GPU
-            batch = tuple(t.to(device) for t in batch)
+            batch = tuple(t.to(args.gpu) for t in batch)
             # Unpack the inputs from our dataloader
             b_input_ids, b_input_mask, b_labels = batch
             # Clear out the gradients (by default they accumulate)
@@ -201,7 +209,7 @@ def train(model, optimizer, train_dataloader, dev_dataloader):
         # Evaluate data for one epoch
         for batch in dev_dataloader:
             # Add batch to GPU
-            batch = tuple(t.to(device) for t in batch)
+            batch = tuple(t.to(args.gpu) for t in batch)
             # Unpack the inputs from our dataloader
             b_input_ids, b_input_mask, b_labels = batch
             # Telling the model not to compute or store gradients, saving memory and speeding up validation

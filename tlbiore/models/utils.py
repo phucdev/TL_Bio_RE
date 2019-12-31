@@ -1,8 +1,15 @@
 import pandas as pd
 import numpy as np
+from torch import device
 
 
 MAX_LEN = 512
+
+
+class Arguments:
+    def __init__(self, gpu: device, epochs):
+        self.gpu = gpu
+        self.epochs = epochs
 
 
 def read_tsv(file_path):
