@@ -90,141 +90,88 @@ class Model(pl.LightningModule):
         #  to add layers for ALI method
 
         # use pretrained BERT
-        self.bert = BertModel.from_pretrained(BIO_BERT, output_attentions=True)
-
-        # TODO: check number of input features, add layer for combination of the 3, softmax etc.
-        # fine tuner
-        self.cls_layer = nn.Linear(self.bert.config.hidden_size, 1)
-        self.e1_layer = nn.Linear(self.bert.config.hidden_size, 1)
-        self.e2_layer = nn.Linear(self.bert.config.hidden_size, 1)
-        self.concat_layer = nn.Linear(self.bert.config.hidden_size*3, 1)
+        self.bert = BertForSequenceClassification.from_pretrained(BIO_BERT, output_attentions=True)
 
         train_dataloader, val_dataloader, test_dataloader = get_dataloader(LIN_DIRECTORY)
         self._train_dataloader = train_dataloader
         self._val_dataloader = val_dataloader
         self._test_dataloader = test_dataloader
 
-    def forward(self, input_ids, attention_mask):
+    def configure_optimizers(self):
+        param_optimizer = list(self.model.named_parameters())
+        no_decay = ["bias", "gamma", "beta"]
+        optimizer_grouped_parameters = [
+            {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
+             'weight_decay_rate': 0.01},
+            {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)],
+             'weight_decay_rate': 0.0}
+        ]
 
-        # Feeding the input to BERT model to obtain contextualized representations
-        cont_reps, _ = self.bert(input_ids=input_ids, attention_mask=attention_mask)
-    
-        # Obtaining the representation of [CLS] head
-        cls_rep = cont_reps[:, 0]
+        optimizer = AdamW(optimizer_grouped_parameters, lr=2e-5, )
+        return optimizer
 
-        def get_span_rep(marker_id, include_markers=True):
-            search_list = np.asarray(input_ids)
-            indices = np.where(search_list == marker_id)
-            assert len(indices) % 2 == 0    # if that fails, we need to choose different positional markers
+    def training_steps(self, batch):
+        # batch
+        input_ids, attention_mask, label = batch
 
-            rep = np.zeros_like(cls_rep)
-            indices_pairs = indices.reshape(-1, 2)   # make start-end pairs
-            for pair in indices_pairs:
-                if not include_markers:
-                    rep += np.average(cont_reps[:, pair[0]+1:pair[1]])
-                else:
-                    rep += np.average(cont_reps[:, pair[0]:pair[1]+1])
-            rep /= len(indices_pairs)   # average to account for split entity
-            return rep
+        # fwd
+        y_hat, attn = self.forward(input_ids, attention_mask)
 
-        # Obtaining the representation of e1
+        # loss
+        loss = nn.functional.cross_entropy(y_hat, label)
 
-        e1_rep = get_span_rep(E1_MARKER_ID)
+        # logs
+        tensorboard_logs = {'train_loss': loss}
+        return {'loss': loss, 'log': tensorboard_logs}
 
-        # Obtaining the representation of e2
-        e2_rep = get_span_rep(E2_MARKER_ID)
+    def validation_step(self, batch, batch_nb):
+        # batch
+        input_ids, attention_mask, token_type_ids, label = batch
 
+        # fwd
+        y_hat, attn = self.forward(input_ids, attention_mask, token_type_ids)
 
-    
-        # Feeding cls_rep to the classifier layer
-        logits = self.cls_layer(cls_rep)
-    
-        return logits
+        # loss
+        loss = nn.functional.cross_entropy(y_hat, label)
 
+        # acc
+        a, y_hat = torch.max(y_hat, dim=1)
+        val_acc = utils.flat_accuracy(y_hat.cpu(), label.cpu())
+        val_acc = torch.tensor(val_acc)
 
-def configure_optimizers(model):
-    param_optimizer = list(model.named_parameters())
-    no_decay = ["bias", "gamma", "beta"]
-    optimizer_grouped_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
-         'weight_decay_rate': 0.01},
-        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)],
-         'weight_decay_rate': 0.0}
-    ]
+        return {'val_loss': loss, 'val_acc': val_acc}
 
-    optimizer = AdamW(optimizer_grouped_parameters, lr=2e-5,)
-    return optimizer
+    def validation_end(self, outputs):
+        avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
+        avg_val_acc = torch.stack([x['val_acc'] for x in outputs]).mean()
 
+        tensorboard_logs = {'val_loss': avg_loss, 'avg_val_acc': avg_val_acc}
+        return {'avg_val_loss': avg_loss, 'progress_bar': tensorboard_logs}
 
-def train(model, optimizer, train_dataloader, dev_dataloader, args: utils.Arguments):    # TODO: args as named tuple/dict
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    def test_step(self, batch, batch_nb):
+        input_ids, attention_mask, token_type_ids, label = batch
 
-    # Store our loss and accuracy for plotting
-    train_loss_set = []
+        y_hat, attn = self.forward(input_ids, attention_mask, token_type_ids)
 
-    # trange is a tqdm wrapper around the normal python range
-    for _ in trange(args.epochs, desc="Epoch"):
+        a, y_hat = torch.max(y_hat, dim=1)
+        test_acc = utils.flat_accuracy(y_hat.cpu(), label.cpu())
 
-        # Training
+        return {'test_acc': torch.tensor(test_acc)}
 
-        # Set our model to training mode (as opposed to evaluation mode)
-        model.train()
+    def test_end(self, outputs):
+        avg_test_acc = torch.stack([x['test_acc'] for x in outputs]).mean()
 
-        # Tracking variables
-        tr_loss = 0
-        nb_tr_examples, nb_tr_steps = 0, 0
+        tensorboard_logs = {'avg_test_acc': avg_test_acc}
+        return {'avg_test_acc': avg_test_acc, 'log': tensorboard_logs, 'progress_bar': tensorboard_logs}
 
-        # Train the data for one epoch
-        for step, batch in enumerate(train_dataloader):
-            # Add batch to GPU
-            batch = tuple(t.to(args.gpu) for t in batch)
-            # Unpack the inputs from our dataloader
-            b_input_ids, b_input_mask, b_labels = batch
-            # Clear out the gradients (by default they accumulate)
-            optimizer.zero_grad()
-            # Forward pass
-            loss, logits = model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask, labels=b_labels)
-            train_loss_set.append(loss.item())
-            # Backward pass
-            loss.backward()
-            # Update parameters and take a step using the computed gradient
-            optimizer.step()
+    @pl.data_loader
+    def train_dataloader(self):
+        return self.train_dataloader
 
-            # Update tracking variables
-            tr_loss += loss.item()
-            nb_tr_examples += b_input_ids.size(0)
-            nb_tr_steps += 1
+    @pl.data_loader
+    def val_dataloader(self):
+        return self.dev_dataloader
 
-        print("Train loss: {}".format(tr_loss / nb_tr_steps))
-
-        # Validation
-
-        # Put model in evaluation mode to evaluate loss on the validation set
-        model.eval()
-
-        # Tracking variables
-        eval_loss, eval_accuracy = 0, 0
-        nb_eval_steps, nb_eval_examples = 0, 0
-
-        # Evaluate data for one epoch
-        for batch in dev_dataloader:
-            # Add batch to GPU
-            batch = tuple(t.to(args.gpu) for t in batch)
-            # Unpack the inputs from our dataloader
-            b_input_ids, b_input_mask, b_labels = batch
-            # Telling the model not to compute or store gradients, saving memory and speeding up validation
-            with torch.no_grad():
-                # Forward pass, calculate logit predictions
-                output = model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask)
-                logits = output[0]
-
-            # Move logits and labels to CPU
-            logits = logits.detach().cpu().numpy()
-            label_ids = b_labels.to('cpu').numpy()
-
-            tmp_eval_accuracy = utils.flat_accuracy(logits, label_ids)
-
-            eval_accuracy += tmp_eval_accuracy
-            nb_eval_steps += 1
-
-        print("Validation Accuracy: {}".format(eval_accuracy / nb_eval_steps))
+    @pl.data_loader
+    def test_dataloader(self):
+        return self.test_dataloader
