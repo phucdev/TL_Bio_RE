@@ -1,18 +1,11 @@
 import torch
 from torch import nn
-import pytorch_lightning as pl
-from pytorch_lightning.callbacks import EarlyStopping
-
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
+import pytorch_lightning as pl
 from keras.preprocessing.sequence import pad_sequences
-from sklearn.model_selection import train_test_split
-from transformers import BertTokenizer, BertConfig, BertModel
-from transformers import AdamW, BertForSequenceClassification
-from transformers import get_linear_schedule_with_warmup
-from tqdm import tqdm, trange
+from transformers import BertTokenizer, BertModel
+from transformers import AdamW
 import pandas as pd
-import io
-import numpy as np
 from tlbiore.models import utils
 
 
@@ -80,17 +73,23 @@ def get_dataloader(data_directory):
     return train_dataloader, dev_dataloader, test_dataloader
 
 
-class Model(pl.LightningModule):
+class BertBiomedicalRE(pl.LightningModule):
 
     def __init__(self):
-        super(Model, self).__init__()
+        super(BertBiomedicalRE, self).__init__()
+        self.num_labels = 2
         # TODO: see
         #  https://github.com/huggingface/transformers/blob/594ca6deadb6bb79451c3093641e3c9e5dcfa446/src/transformers/modeling_bert.py#L1099
         #  https://medium.com/swlh/painless-fine-tuning-of-bert-in-pytorch-b91c14912caa?
         #  to add layers for ALI method
 
         # use pretrained BERT
-        self.bert = BertForSequenceClassification.from_pretrained(BIO_BERT, output_attentions=True)
+        self.bert = BertModel.from_pretrained(BIO_BERT, output_attentions=True)
+
+        # fine tuner (2 classes)
+        self.dropout = nn.Dropout(self.bert.config.hidden_dropout_prob)
+        # TODO: add additional layers here
+        self.classifier = nn.Linear(in_features=self.bert.config.hidden_size, out_features=self.num_labels)
 
         train_dataloader, val_dataloader, test_dataloader = get_dataloader(LIN_DIRECTORY)
         self._train_dataloader = train_dataloader
@@ -110,15 +109,47 @@ class Model(pl.LightningModule):
         optimizer = AdamW(optimizer_grouped_parameters, lr=2e-5, )
         return optimizer
 
+    def forward(self, input_ids, attention_mask, labels):
+        """
+        Follows huggingface BertForSequenceClassification implementation
+        """
+        outputs = self.bert(input_ids=input_ids,
+                            attention_mask=attention_mask,
+                            labels=labels)
+        """
+        With our configuration outputs is a tuple of:
+        - outputs[0]: Sequence of hidden-states at the output of the last layer of the model.
+        - outputs[1]: Last layer hidden-state of the first token of the sequence (classification token) further 
+            processed by a Linear layer and a Tanh activation function. 
+        - outputs[2]: Attention weights after the attention softmax, used to compute the weighted average in the 
+            self-attention heads.
+        """
+
+        pooled_output = outputs[1]
+
+        # randomly deactivate few neurons in nn to avoid overfitting
+        pooled_output = self.dropout(pooled_output)
+
+        # TODO add additional logic for layers (Alibaba) here
+        logits = self.classifier(pooled_output)
+
+        outputs = (logits,) + outputs[2:]  # add hidden states and attention if they are here
+
+        loss_fct = nn.CrossEntropyLoss()
+        loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+        outputs = (loss,) + outputs
+
+        return outputs  # (loss), logits, (hidden_states), (attentions)
+
     def training_steps(self, batch):
         # batch
-        input_ids, attention_mask, label = batch
+        input_ids, attention_mask, labels = batch
 
         # fwd
-        y_hat, attn = self.forward(input_ids, attention_mask)
+        y_hat, attn = self.forward(input_ids, attention_mask, labels)
 
         # loss
-        loss = nn.functional.cross_entropy(y_hat, label)
+        loss = nn.functional.cross_entropy(y_hat, labels)
 
         # logs
         tensorboard_logs = {'train_loss': loss}
