@@ -9,15 +9,17 @@ from transformers import AdamW
 import pandas as pd
 from sklearn.metrics import accuracy_score
 from tlbiore.models import utils
+import os
 
 
+CWD = os.getcwd()
 MAX_LEN = 512   # Number used in original paper, however we have some sequences that have length > 800
 EPOCHS = 4  # Number of training epochs (authors recommend between 2 and 4)
-BIO_BERT = '/content/drive/My Drive/TransferLearning/biobert_v1.1._pubmed'
+BIO_BERT = CWD+'/biobert_v1.1._pubmed'
 # SCI_BERT = '/content/drive/My Drive/TransferLearning/biobert_v1.1._pubmed'
-LIN_DIRECTORY = '/content/drive/My Drive/TransferLearning/Trainingsdaten/lin'
-LEE_DIRECTORY = '/content/drive/My Drive/TransferLearning/Trainingsdaten/lee'
-ALI_DIRECTORY = '/content/drive/My Drive/TransferLearning/Trainingsdaten/ali'
+LIN_DIRECTORY = CWD+'/data/lin'
+LEE_DIRECTORY = CWD+'/data/lee'
+ALI_DIRECTORY = CWD+'/data/ali'
 E1_MARKER_ID = 1002     # "$" is 1002, "#" is 1001
 E2_MARKER_ID = 1001
 
