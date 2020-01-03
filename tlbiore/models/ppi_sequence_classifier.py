@@ -10,7 +10,9 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from tlbiore.models import utils
 
-
+MAX_LEN = 256  # Number used in original paper was 512, however we have some sequences that have length > 800 and 512
+# seems to take up too much memory
+BATCH_SIZE = 16  # Dito
 EPOCHS = 4  # Number of training epochs (authors recommend between 2 and 4)
 BIO_BERT = '../biobert_v1.1._pubmed'
 # SCI_BERT = '/content/drive/My Drive/TransferLearning/biobert_v1.1._pubmed'
@@ -19,6 +21,7 @@ LEE_DIRECTORY = '../data/lee'
 ALI_DIRECTORY = '../data/ali'
 E1_MARKER_ID = 1002     # "$" is 1002, "#" is 1001
 E2_MARKER_ID = 1001
+ARGS = utils.Arguments(BIO_BERT, MAX_LEN, BATCH_SIZE)
 
 
 def preprocess(tokenizer: BertTokenizer, x: pd.DataFrame, max_length):
@@ -46,7 +49,7 @@ def preprocess(tokenizer: BertTokenizer, x: pd.DataFrame, max_length):
     return input_ids, attention_masks, labels
 
 
-def get_dataloader(data_directory, args: utils.Arguments):
+def get_dataloader(data_directory, args: utils.Arguments = ARGS):
     train_data = utils.read_tsv(data_directory+"/train.tsv")
     dev_data = utils.read_tsv(data_directory + "/dev.tsv")
     test_data = utils.read_tsv(data_directory + "/test.tsv")
@@ -74,7 +77,7 @@ def get_dataloader(data_directory, args: utils.Arguments):
 
 class BertBiomedicalRE(pl.LightningModule):
 
-    def __init__(self, args: utils.Arguments):
+    def __init__(self, args: utils.Arguments = ARGS):
         super(BertBiomedicalRE, self).__init__()
         self.num_labels = 2
         # TODO: see
