@@ -7,11 +7,10 @@ from keras.preprocessing.sequence import pad_sequences
 from transformers import BertTokenizer, BertModel
 from transformers import AdamW
 import pandas as pd
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from tlbiore.models import utils
 
 
-MAX_LEN = 512   # Number used in original paper, however we have some sequences that have length > 800
 EPOCHS = 4  # Number of training epochs (authors recommend between 2 and 4)
 BIO_BERT = '../biobert_v1.1._pubmed'
 # SCI_BERT = '/content/drive/My Drive/TransferLearning/biobert_v1.1._pubmed'
@@ -22,15 +21,15 @@ E1_MARKER_ID = 1002     # "$" is 1002, "#" is 1001
 E2_MARKER_ID = 1001
 
 
-def preprocess(tokenizer: BertTokenizer, x: pd.DataFrame):
+def preprocess(tokenizer: BertTokenizer, x: pd.DataFrame, max_length):
     sentences = x.sentence.values
 
     # TODO get position of entities & positional markers in input_ids
     # TODO handle case where sequence is longer than 512, e.g. use 512 window on relevant parts?
     # Tokenize input
-    input_ids = [tokenizer.encode(sent, add_special_tokens=True, max_length=MAX_LEN) for sent in sentences]
+    input_ids = [tokenizer.encode(sent, add_special_tokens=True, max_length=max_length) for sent in sentences]
     # Pad our input tokens
-    input_ids = pad_sequences(input_ids, maxlen=MAX_LEN, dtype="long", truncating="post", padding="post")
+    input_ids = pad_sequences(input_ids, maxlen=max_length, dtype="long", truncating="post", padding="post")
     # Create attention masks
     attention_masks = []
 
@@ -47,15 +46,13 @@ def preprocess(tokenizer: BertTokenizer, x: pd.DataFrame):
     return input_ids, attention_masks, labels
 
 
-def get_dataloader(data_directory):
+def get_dataloader(data_directory, args: utils.Arguments):
     train_data = utils.read_tsv(data_directory+"/train.tsv")
     dev_data = utils.read_tsv(data_directory + "/dev.tsv")
     test_data = utils.read_tsv(data_directory + "/test.tsv")
 
-    batch_size = 32
-
     # Import BERT tokenizer
-    tokenizer = BertTokenizer.from_pretrained(BIO_BERT, do_lower_case=True)
+    tokenizer = BertTokenizer.from_pretrained(args.bert, do_lower_case=True)
     # special_tokens_dict = {'additional_special_tokens': ['@PROTEIN1$', '@PROTEIN2$', 'ps', 'pe']}
     # num_added_tokens = tokenizer.add_special_tokens(special_tokens_dict)
     # print('Added {} tokens'.format(num_added_tokens))
@@ -63,21 +60,21 @@ def get_dataloader(data_directory):
     # Create an iterator of our data with torch DataLoader. This helps save on memory during training because,
     # unlike a for loop, with an iterator the entire data set does not need to be loaded into memory
 
-    train_data = TensorDataset(*preprocess(tokenizer, train_data))
-    train_dataloader = DataLoader(train_data, sampler=RandomSampler(train_data), batch_size=batch_size)
+    train_data = TensorDataset(*preprocess(tokenizer, train_data, args.max_length))
+    train_dataloader = DataLoader(train_data, sampler=RandomSampler(train_data), batch_size=args.batch_size)
 
-    dev_data = TensorDataset(*preprocess(tokenizer, dev_data))
-    dev_dataloader = DataLoader(dev_data, sampler=SequentialSampler(dev_data), batch_size=batch_size)
+    dev_data = TensorDataset(*preprocess(tokenizer, dev_data, args.max_length))
+    dev_dataloader = DataLoader(dev_data, sampler=SequentialSampler(dev_data), batch_size=args.batch_size)
 
-    test_data = TensorDataset(*preprocess(tokenizer, test_data))
-    test_dataloader = DataLoader(test_data, sampler=SequentialSampler(test_data), batch_size=batch_size)
+    test_data = TensorDataset(*preprocess(tokenizer, test_data, args.max_length))
+    test_dataloader = DataLoader(test_data, sampler=SequentialSampler(test_data), batch_size=args.batch_size)
 
     return train_dataloader, dev_dataloader, test_dataloader
 
 
 class BertBiomedicalRE(pl.LightningModule):
 
-    def __init__(self):
+    def __init__(self, args: utils.Arguments):
         super(BertBiomedicalRE, self).__init__()
         self.num_labels = 2
         # TODO: see
@@ -93,7 +90,7 @@ class BertBiomedicalRE(pl.LightningModule):
         # TODO: add additional layers here
         self.classifier = nn.Linear(in_features=self.bert.config.hidden_size, out_features=self.num_labels)
 
-        train_dataloader, val_dataloader, test_dataloader = get_dataloader(LIN_DIRECTORY)
+        train_dataloader, val_dataloader, test_dataloader = get_dataloader(LIN_DIRECTORY, args)
         self._train_dataloader = train_dataloader
         self._val_dataloader = val_dataloader
         self._test_dataloader = test_dataloader
@@ -161,7 +158,7 @@ class BertBiomedicalRE(pl.LightningModule):
 
         # acc
         a, y_hat = torch.max(y_hat, dim=1)
-        val_acc = accuracy_score(y_hat.cpu(), labels.cpu())
+        val_acc = accuracy_score(y_hat.cpu(), labels.cpu())     # TODO: check
         val_acc = torch.tensor(val_acc)
 
         return {'val_loss': loss, 'val_acc': val_acc}
@@ -180,14 +177,21 @@ class BertBiomedicalRE(pl.LightningModule):
 
         a, y_hat = torch.max(y_hat, dim=1)
         test_acc = accuracy_score(y_hat.cpu(), labels.cpu())
+        test_precision, test_recall, test_fscore, _ = precision_recall_fscore_support(y_hat.cpu(), labels.cpu())
 
-        return {'test_acc': torch.tensor(test_acc)}
+        return {'test_acc': torch.tensor(test_acc), 'test_precision': torch.tensor(test_precision),
+                'test_recall': torch.tensor(test_recall), 'test_fscore': torch.tensor(test_fscore)}
 
     def test_end(self, outputs):
         avg_test_acc = torch.stack([x['test_acc'] for x in outputs]).mean()
+        avg_test_precision = torch.stack([x['test_precision'] for x in outputs]).mean()
+        avg_test_recall = torch.stack([x['test_recall'] for x in outputs]).mean()
+        avg_test_fscore = torch.stack([x['test_fscore'] for x in outputs]).mean()
 
         tensorboard_logs = {'avg_test_acc': avg_test_acc}
-        return {'avg_test_acc': avg_test_acc, 'log': tensorboard_logs, 'progress_bar': tensorboard_logs}
+        return {'avg_test_acc': avg_test_acc, 'avg_test_precision': avg_test_precision,
+                'avg_test_recall': avg_test_recall, 'avg_test_fscore': avg_test_fscore,
+                'log': tensorboard_logs, 'progress_bar': tensorboard_logs}
 
     @pl.data_loader
     def train_dataloader(self):
