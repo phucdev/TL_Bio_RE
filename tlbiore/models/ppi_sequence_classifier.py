@@ -135,7 +135,7 @@ class BertBiomedicalRE(pl.LightningModule):
 
         return logits, attn
 
-    def training_steps(self, batch, batch_nb):
+    def training_step(self, batch, batch_nb):
         # batch
         input_ids, attention_mask, labels = batch
 
@@ -191,6 +191,11 @@ class BertBiomedicalRE(pl.LightningModule):
 
     @pl.data_loader
     def train_dataloader(self):
+        return self._train_dataloader
+
+    @pl.data_loader
+    def tng_dataloader(self):
+        # supposedly deprecated, but PyCharm seems to require this implementation
         return self._train_dataloader
 
     @pl.data_loader
