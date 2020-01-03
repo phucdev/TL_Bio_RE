@@ -49,7 +49,7 @@ def preprocess(tokenizer: BertTokenizer, x: pd.DataFrame, max_length):
     return input_ids, attention_masks, labels
 
 
-def get_dataloader(data_directory, args: utils.Arguments = ARGS):
+def get_dataloader(data_directory, args: utils.Arguments):
     train_data = utils.read_tsv(data_directory+"/train.tsv")
     dev_data = utils.read_tsv(data_directory + "/dev.tsv")
     test_data = utils.read_tsv(data_directory + "/test.tsv")
@@ -77,7 +77,7 @@ def get_dataloader(data_directory, args: utils.Arguments = ARGS):
 
 class BertBiomedicalRE(pl.LightningModule):
 
-    def __init__(self, args: utils.Arguments = ARGS):
+    def __init__(self):
         super(BertBiomedicalRE, self).__init__()
         self.num_labels = 2
         # TODO: see
@@ -93,7 +93,7 @@ class BertBiomedicalRE(pl.LightningModule):
         # TODO: add additional layers here
         self.classifier = nn.Linear(in_features=self.bert.config.hidden_size, out_features=self.num_labels)
 
-        train_dataloader, val_dataloader, test_dataloader = get_dataloader(LIN_DIRECTORY, args)
+        train_dataloader, val_dataloader, test_dataloader = get_dataloader(LIN_DIRECTORY, ARGS)
         self._train_dataloader = train_dataloader
         self._val_dataloader = val_dataloader
         self._test_dataloader = test_dataloader
