@@ -14,7 +14,7 @@ MAX_LEN = 256  # Number used in original paper was 512, however we have some seq
 # seems to take up too much memory
 BATCH_SIZE = 16  # Dito
 EPOCHS = 4  # Number of training epochs (authors recommend between 2 and 4)
-BIO_BERT = '../biobert_v1.1._pubmed'
+BIO_BERT = '../models/biobert_v1.1._pubmed'
 # SCI_BERT = '/content/drive/My Drive/TransferLearning/biobert_v1.1._pubmed'
 LIN_DIRECTORY = '../data/lin'
 LEE_DIRECTORY = '../data/lee'
