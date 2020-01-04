@@ -180,10 +180,11 @@ class BertBiomedicalRE(pl.LightningModule):
 
         a, y_hat = torch.max(y_hat, dim=1)
         test_acc = accuracy_score(y_hat.cpu(), labels.cpu())
-        test_precision, test_recall, test_fscore, _ = precision_recall_fscore_support(y_hat.cpu(), labels.cpu())
+        test_precision, test_recall, test_fscore, _ = precision_recall_fscore_support(y_hat.cpu(), labels.cpu(),
+                                                                                      labels=[1, 0])
 
-        return {'test_acc': torch.tensor(test_acc), 'test_precision': torch.tensor(test_precision),
-                'test_recall': torch.tensor(test_recall), 'test_fscore': torch.tensor(test_fscore)}
+        return {'test_acc': torch.tensor(test_acc), 'test_precision': torch.tensor(test_precision[0]),
+                'test_recall': torch.tensor(test_recall[0]), 'test_fscore': torch.tensor(test_fscore[0])}
 
     def test_end(self, outputs):
         avg_test_acc = torch.stack([x['test_acc'] for x in outputs]).mean()
