@@ -220,8 +220,8 @@ class BertTextClassifier(TextClassifier):
         return metric_dict
 
 
-@Model.register("bert_for_classification")
-class BertForClassification(Model):
+@Model.register("bert_for_ppi")
+class BertForPPI(Model):
     """
     An AllenNLP Model that runs pretrained BERT,
     takes the pooled output, and adds a Linear layer on top.
@@ -257,6 +257,7 @@ class BertForClassification(Model):
         self,
         vocab: Vocabulary,
         bert_model: Union[str, BertModel],
+        verbose_metrics: bool = False,
         dropout: float = 0.0,
         num_labels: int = None,
         index: str = "bert",
@@ -284,22 +285,30 @@ class BertForClassification(Model):
         else:
             out_features = vocab.get_vocab_size(namespace=self._label_namespace)
 
+        self.num_classes = out_features
         self._dropout = torch.nn.Dropout(p=dropout)
 
         self._classification_layer = torch.nn.Linear(in_features, out_features)
-        self._accuracy = CategoricalAccuracy()
+        self.label_accuracy = CategoricalAccuracy()
+        self.label_f1_metrics = {}
+
+        self.verbose_metrics = verbose_metrics
+
+        for i in range(self.num_classes):
+            self.label_f1_metrics[vocab.get_token_from_index(index=i, namespace="labels")] = F1Measure(positive_label=i)
+
         self._loss = torch.nn.CrossEntropyLoss()
         self._index = index
         initializer(self._classification_layer)
 
     def forward(  # type: ignore
-        self, tokens: Dict[str, torch.LongTensor], label: torch.IntTensor = None
+        self, sentence: Dict[str, torch.LongTensor], label: torch.IntTensor = None
     ) -> Dict[str, torch.Tensor]:
 
         """
         Parameters
         ----------
-        tokens : Dict[str, torch.LongTensor]
+        sentence : Dict[str, torch.LongTensor]
             From a ``TextField`` (that has a bert-pretrained token indexer)
         label : torch.IntTensor, optional (default = None)
             From a ``LabelField``
@@ -315,8 +324,8 @@ class BertForClassification(Model):
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
         """
-        input_ids = tokens[self._index]
-        token_type_ids = tokens[f"{self._index}-type-ids"]
+        input_ids = sentence[self._index]
+        token_type_ids = sentence[f"{self._index}-type-ids"]
         input_mask = (input_ids != 0).long()
 
         _, pooled = self.bert_model(
@@ -333,9 +342,14 @@ class BertForClassification(Model):
         output_dict = {"logits": logits, "probs": probs}
 
         if label is not None:
-            loss = self._loss(logits, label.long().view(-1))
+            loss = self._loss(logits, label)
             output_dict["loss"] = loss
-            self._accuracy(logits, label)
+
+            # compute F1 per label
+            for i in range(self.num_classes):
+                metric = self.label_f1_metrics[self.vocab.get_token_from_index(index=i, namespace="labels")]
+                metric(probs, label)
+            self.label_accuracy(logits, label)
 
         return output_dict
 
@@ -361,5 +375,20 @@ class BertForClassification(Model):
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        metrics = {"accuracy": self._accuracy.get_metric(reset)}
-        return metrics
+        metric_dict = {}
+
+        sum_f1 = 0.0
+        for name, metric in self.label_f1_metrics.items():
+            metric_val = metric.get_metric(reset)
+            if self.verbose_metrics:
+                metric_dict[name + '_P'] = metric_val[0]
+                metric_dict[name + '_R'] = metric_val[1]
+                metric_dict[name + '_F1'] = metric_val[2]
+            sum_f1 += metric_val[2]
+
+        names = list(self.label_f1_metrics.keys())
+        total_len = len(names)
+        average_f1 = sum_f1 / total_len
+        metric_dict['average_F1'] = average_f1
+        metric_dict['accuracy'] = self.label_accuracy.get_metric(reset)
+        return metric_dict

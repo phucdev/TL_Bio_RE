@@ -61,7 +61,7 @@ class PPIDatasetReader(DatasetReader):
                 line_json = json.loads(line)
                 pair_id = line_json['pair_id']
                 sentence = line_json['sentence']
-                label = line_json['label']
+                label = str(line_json['label'])
                 yield self.text_to_instance(sentence, label, pair_id)
 
     @overrides
@@ -76,6 +76,6 @@ class PPIDatasetReader(DatasetReader):
         if label is not None:
             fields['label'] = LabelField(label)
 
-        if pair_id is not None:
-            fields['pair_id'] = MetadataField(pair_id)
+        #if pair_id is not None:
+        #    fields['pair_id'] = MetadataField(pair_id)
         return Instance(fields)

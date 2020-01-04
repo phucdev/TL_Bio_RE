@@ -1,6 +1,9 @@
 .DS_Store
 .idea
 *.tsv
+models/
+notebooks/lightning_logs/
+notebooks/savepath/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

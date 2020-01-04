@@ -74,18 +74,18 @@ class Sentence:
             self.pairs.append(pair)
 
     def get_examples(self):
-        p_id: List[str] = []
+        pair_id: List[str] = []
         sentence: List[str] = []
         label: List[int] = []
         e1_span: List = []
         e2_span: List = []
         for pair in self.pairs:
-            p_id.append(pair.id)
+            pair_id.append(pair.id)
             sentence.append(self.text)
             label.append(pair.label)
             e1_span.append(self.get_entity(pair.e1).get_spans())
             e2_span.append(self.get_entity(pair.e2).get_spans())
-        example_df = pd.DataFrame({'p_id': p_id, 'sentence': sentence, 'label': label,
+        example_df = pd.DataFrame({'pair_id': pair_id, 'sentence': sentence, 'label': label,
                                    'e1_span': e1_span, 'e2_span': e2_span}).astype({'label': 'int32'})
         return example_df
 

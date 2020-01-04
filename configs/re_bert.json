@@ -4,9 +4,6 @@
   "numpy_seed": std.parseInt(std.extVar("NUMPY_SEED")),
   "dataset_reader": {
      "type": "ppi_dataset_reader",
-     "tokenizer": {
-       "type": "bert_basic"
-     },
      "token_indexers": {
         "bert": {
             "type": "bert-pretrained",
@@ -19,13 +16,12 @@
   "test_data_path": std.extVar("TEST_PATH"),
   "evaluate_on_test": true,
   "model": {
-    "type": "bert_text_classifier",
+    "type": "bert_for_ppi",
     "bert_model": std.extVar("BERT_MODEL"),
-    "dropout": std.extVar("DROPUOUT_RATE")
+    "dropout": std.extVar("DROPOUT_RATE")
   },
   "iterator": {
-    "type": "bucket",
-    "sorting_keys": [["text", "num_tokens"]],
+    "type": "basic",
     "batch_size": 16,
     "cache_instances": true
   },

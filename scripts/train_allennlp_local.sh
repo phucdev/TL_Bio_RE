@@ -12,7 +12,7 @@ export BERT_MODEL=models/biobert_v1.1._pubmed/
 
 export DATASET_SIZE=$dataset_size
 
-CONFIG_FILE=allennlp_config/re_bert.json
+CONFIG_FILE=configs/re_bert.json
 
 SEED=13270
 PYTORCH_SEED=`expr $SEED / 10`
@@ -32,4 +32,4 @@ export DROPOUT_RATE=0.1
 export NUM_EPOCHS=4
 export LEARNING_RATE=0.001
 
-python -m allennlp.run train $CONFIG_FILE  --include-package tlbiore -s "$@"
+CUDA_VISIBLE_DEVICES=0 python -m allennlp.run train $CONFIG_FILE  --include-package tlbiore -s "$@"
