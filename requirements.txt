@@ -1,4 +1,9 @@
+transformers
 allennlp
+scikit-learn
+numpy
+overrides
 lxml
 pandas
 torch
+ipykernel

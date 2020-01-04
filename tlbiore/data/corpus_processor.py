@@ -3,6 +3,13 @@ from tlbiore.data.corpus import *
 from tlbiore.data import utils
 
 
+def process_corpora(file_list: List):
+    assert len(file_list) == 2  # TODO: only works for 2 corpora
+    corpora = [process_corpus(xml_file) for xml_file in file_list]
+    corpora[0].documents.extend(corpora[1].documents)
+    return corpora[0]
+
+
 def process_corpus(xml_file, corpus_id='PPI_corpus'):
     corpus = Corpus(corpus_id)
 
@@ -19,13 +26,6 @@ def process_corpus(xml_file, corpus_id='PPI_corpus'):
         doc.clear()
         corpus.add_document(document)
     return corpus
-
-
-def process_corpora(file_list: List):
-    assert len(file_list) == 2  # TODO: only works for 2 corpora
-    corpora = [process_corpus(xml_file) for xml_file in file_list]
-    corpora[0].documents.extend(corpora[1].documents)
-    return corpora[0]
 
 
 def add_markers(example, e1_start, e1_end, e2_start, e2_end):

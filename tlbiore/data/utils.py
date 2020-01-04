@@ -75,7 +75,7 @@ def export_tsv(df, out):
     Deletes span columns
     Then exports to out path
     """
-    data = df.copy()[['p_id', 'sentence', 'label']]
+    data = df.copy()[['pair_id', 'sentence', 'label']]
     os.makedirs(os.path.dirname(out), exist_ok=True)
     data.to_csv(out, sep='\t', index=False, header=False)
 
@@ -85,6 +85,6 @@ def export_jsonl(df, out):
     Deletes span columns
     Then exports to out path
     """
-    data = df.copy()[['p_id', 'sentence', 'label']]
+    data = df.copy()[['pair_id', 'sentence', 'label']]
     os.makedirs(os.path.dirname(out), exist_ok=True)
     data.to_json(out, orient='records', lines=True)
