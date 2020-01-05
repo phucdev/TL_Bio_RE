@@ -16,7 +16,7 @@ local bert_model = "models/biobert_v1.1._pubmed/";
 {
     "dataset_reader": {
         "lazy": false,
-        "type": "bert_classification_test",
+        "type": "new_ppi_dataset_reader",
         "tokenizer": {
             "type": "bert-basic"
         },
