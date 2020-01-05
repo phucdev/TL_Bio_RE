@@ -22,7 +22,7 @@
   },
   "iterator": {
     "type": "basic",
-    "batch_size": 16,
+    "batch_size": 32,
     "cache_instances": true
   },
   "trainer": {
