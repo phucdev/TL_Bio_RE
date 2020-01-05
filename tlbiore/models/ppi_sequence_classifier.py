@@ -10,9 +10,9 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from tlbiore.models import utils
 
-MAX_LEN = 256  # Number used in original paper was 512, however we have some sequences that have length > 800 and 512
+MAX_LEN = 512  # Number used in original paper was 512, however we have some sequences that have length > 800 and 512
 # seems to take up too much memory
-BATCH_SIZE = 16  # Dito
+BATCH_SIZE = 8  # Dito
 EPOCHS = 4  # Number of training epochs (authors recommend between 2 and 4)
 BIO_BERT = '../models/biobert_v1.1._pubmed'
 # SCI_BERT = '/content/drive/My Drive/TransferLearning/biobert_v1.1._pubmed'
@@ -120,9 +120,9 @@ class BertBiomedicalRE(pl.LightningModule):
         """
         With our configuration outputs is a tuple of:
         - outputs[0]: Sequence of hidden-states at the output of the last layer of the model.
-        - outputs[1]: Last layer hidden-state of the first token of the sequence (classification token) further 
-            processed by a Linear layer and a Tanh activation function. 
-        - outputs[2]: Attention weights after the attention softmax, used to compute the weighted average in the 
+        - outputs[1]: Last layer hidden-state of the first token of the sequence (classification token) further
+            processed by a Linear layer and a Tanh activation function.
+        - outputs[2]: Attention weights after the attention softmax, used to compute the weighted average in the
             self-attention heads.
         """
         _, pooled_output, attn = outputs
