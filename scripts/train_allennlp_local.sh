@@ -32,4 +32,4 @@ export DROPOUT_RATE=0.1
 export NUM_EPOCHS=4
 export LEARNING_RATE=0.001
 
-CUDA_VISIBLE_DEVICES=0 python -m allennlp.run train $CONFIG_FILE  --include-package tlbiore -s "$@"
+CUDA_VISIBLE_DEVICES=1 python -m allennlp.run train $CONFIG_FILE  --include-package tlbiore -s "$@"
