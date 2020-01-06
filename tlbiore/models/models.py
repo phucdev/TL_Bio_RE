@@ -58,8 +58,7 @@ class TextClassifier(Model):
                 label: torch.IntTensor = None,
                 metadata:  List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         """
-        Parameters
-        ----------
+        :param
         text : Dict[str, torch.LongTensor]
             From a ``TextField``
         label : torch.IntTensor, optional (default = None)
@@ -67,8 +66,7 @@ class TextClassifier(Model):
         metadata : ``List[Dict[str, Any]]``, optional, (default = None)
             Metadata containing the original tokenization of the premise and
             hypothesis with 'premise_tokens' and 'hypothesis_tokens' keys respectively.
-        Returns
-        -------
+        :returns
         An output dictionary consisting of:
         label_logits : torch.FloatTensor
             A tensor of shape ``(batch_size, num_labels)`` representing unnormalised log probabilities of the label.
@@ -164,8 +162,7 @@ class BertTextClassifier(TextClassifier):
                 label: torch.IntTensor = None,
                 metadata:  List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         """
-        Parameters
-        ----------
+        :param
         text : Dict[str, torch.LongTensor]
             From a ``TextField``
         label : torch.IntTensor, optional (default = None)
@@ -173,8 +170,7 @@ class BertTextClassifier(TextClassifier):
         metadata : ``List[Dict[str, Any]]``, optional, (default = None)
             Metadata containing the original tokenization of the premise and
             hypothesis with 'premise_tokens' and 'hypothesis_tokens' keys respectively.
-        Returns
-        -------
+        :returns
         An output dictionary consisting of:
         label_logits : torch.FloatTensor
             A tensor of shape ``(batch_size, num_labels)`` representing unnormalised log probabilities of the label.
@@ -231,8 +227,7 @@ class BertForPPI(Model):
     token indexer, rather than configuring whatever indexing scheme you like.
     See `allennlp/tests/fixtures/bert/bert_for_classification.jsonnet`
     for an example of what your config might look like.
-    Parameters
-    ----------
+    :param
     vocab : ``Vocabulary``
     bert_model : ``Union[str, BertModel]``
         The BERT model to be wrapped. If a string is provided, we will call

@@ -34,7 +34,23 @@ class SpanUtils:
 
 def split_sentence(span_list, sentence: str, include_entities=False):
     """
-    Returns sentence blocks that are not to be replaced.
+    :param
+    span_list : List of spans for each entity.
+    sentence : Sentence string that will be split.
+    include_entities : Whether or not to include the entities in the output array.
+
+    :returns
+    Array of sentence blocks that are not to be replaced.
+    We currently divide the sentence into blocks based on the entity spans.
+    For example:
+        "Cytokines measurements during IFN-alpha treatment showed a trend to
+        decreasing levels of IL-4 at 4, 12, and 24 weeks."
+    with entities "IFN-alpha" and "IL-4" would return for include_entities=False:
+        ["Cytokines measurements during ", " treatment showed a trend to decreasing levels of ",
+        " at 4, 12, and 24 weeks."]
+    and for include_entities=True:
+        ["Cytokines measurements during ", "IFN-alpha", " treatment showed a trend to decreasing levels of ",
+        "IL-4", " at 4, 12, and 24 weeks."]
     """
     sentence_array: List[str] = []
     start_idx = 0
