@@ -39,26 +39,39 @@ def add_markers(example: pd.Series, e1_start: str, e1_end: str, e2_start: str, e
                                           include_entities=True)
 
     idx = 1
+    new_e1_spans = []
+    new_e2_spans = []
+
     for triple in entity_spans:
         entity_no, _, _ = triple
         # TODO Special case in BioInfer with overlapping spans
-        # TODO correct the spans
-        sentence_parts.insert(idx, e1_start if triple[0] == 1 else e2_start)
-        idx += 2
-        sentence_parts.insert(idx, e1_end if triple[0] == 1 else e2_end)
-        idx += 2  # increment for loop and for added elem
+        start = len(''.join(sentence_parts[:idx]))  # ugly hack to recalculate start index
+        sentence_parts.insert(idx, e1_start if entity_no == 1 else e2_start)
+        idx += 2    # +1 start marker, +1 entity itself
+        sentence_parts.insert(idx, e1_end if entity_no == 1 else e2_end)
+        idx += 1    # +1 end marker
+        end = len(''.join(sentence_parts[:idx]))  # ugly hack to recalculate end index
+        idx += 1    # +1 increment for loop
+
+        if entity_no == 1:
+            new_e1_spans.append(Tuple(start, end))
+        else:
+            new_e2_spans.append(Tuple(start, end))
 
     example['sentence'] = ''.join(sentence_parts)
+    example['e1_span'] = new_e1_spans
+    example['e2_span'] = new_e2_spans
 
     return example
 
 
-def anonymize_entities(example: pd.Series, anon1: str, anon2: str):
+def anonymize_entities(example: pd.Series, anon: str):
     """
     example: data frame
-    anon1: to anonymize entity 1 with
-    anon2: to anonymize entity 2 with
+    anon: to anonymize entities with
     """
+    new_e1_spans = []
+    new_e2_spans = []
     entity_spans = utils.SpanUtils.get_span_with_no(1, example['e1_span'])
     entity_spans.extend(utils.SpanUtils.get_span_with_no(2, example['e2_span']))
 
@@ -71,9 +84,20 @@ def anonymize_entities(example: pd.Series, anon1: str, anon2: str):
     for triple in entity_spans:
         entity_no, _, _ = triple
         # TODO Special case in BioInfer with overlapping spans
-        # TODO correct the spans
-        sentence_parts.insert(idx, anon1 if triple[0] == 1 else anon2)
-        idx += 2  # increment for loop and for added elem
+        start = len(''.join(sentence_parts[:idx]))  # ugly hack to recalculate start index
+        sentence_parts.insert(idx, anon)
+        idx += 1  # +1 anonymized entity
+        end = len(''.join(sentence_parts[:idx]))  # ugly hack to recalculate end index
+        idx += 1  # +1 increment for loop
+
+        if entity_no == 1:
+            new_e1_spans.append(Tuple(start, end))
+        else:
+            new_e2_spans.append(Tuple(start, end))
+
+    example['sentence'] = ''.join(sentence_parts)
+    example['e1_span'] = new_e1_spans
+    example['e2_span'] = new_e2_spans
 
     example['sentence'] = ''.join(sentence_parts)
     return example
@@ -93,8 +117,8 @@ def prepare_data_ali(df):
     return df.apply(add_markers, args=('$ ', ' $', '# ', ' #'), axis=1)
 
 
-def prepare_data_lee(df, anon1='@PROTEIN1$', anon2='@PROTEIN2$'):
+def prepare_data_lee(df, anon='@PROTEIN$'):
     """
     Anonymize entities with specified args
     """
-    return df.apply(anonymize_entities, anon1=anon1, anon2=anon2, axis=1)
+    return df.apply(anonymize_entities, anon=anon, axis=1)
