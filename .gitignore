@@ -1,7 +1,5 @@
 .DS_Store
 .idea
-*.tsv
-models/
 notebooks/lightning_logs/
 notebooks/savepath/
 
