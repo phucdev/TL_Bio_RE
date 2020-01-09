@@ -28,7 +28,7 @@ def process_corpus(xml_file, corpus_id='PPI_corpus'):
     return corpus
 
 
-def add_markers(example, e1_start, e1_end, e2_start, e2_end):
+def add_markers(example: pd.Series, e1_start: str, e1_end: str, e2_start: str, e2_end: str):
     entity_spans = utils.SpanUtils.get_span_with_no(1, example['e1_span'])
     entity_spans.extend(utils.SpanUtils.get_span_with_no(2, example['e2_span']))
 
@@ -42,6 +42,7 @@ def add_markers(example, e1_start, e1_end, e2_start, e2_end):
     for triple in entity_spans:
         entity_no, _, _ = triple
         # TODO Special case in BioInfer with overlapping spans
+        # TODO correct the spans
         sentence_parts.insert(idx, e1_start if triple[0] == 1 else e2_start)
         idx += 2
         sentence_parts.insert(idx, e1_end if triple[0] == 1 else e2_end)
@@ -52,7 +53,7 @@ def add_markers(example, e1_start, e1_end, e2_start, e2_end):
     return example
 
 
-def anonymize_entities(example, anon1, anon2):
+def anonymize_entities(example: pd.Series, anon1: str, anon2: str):
     """
     example: data frame
     anon1: to anonymize entity 1 with
@@ -70,6 +71,7 @@ def anonymize_entities(example, anon1, anon2):
     for triple in entity_spans:
         entity_no, _, _ = triple
         # TODO Special case in BioInfer with overlapping spans
+        # TODO correct the spans
         sentence_parts.insert(idx, anon1 if triple[0] == 1 else anon2)
         idx += 2  # increment for loop and for added elem
 

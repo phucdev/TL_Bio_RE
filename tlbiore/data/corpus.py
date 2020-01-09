@@ -1,5 +1,5 @@
 import pandas as pd
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 
 def print_list(object_list):
@@ -22,18 +22,22 @@ class Entity:
         self.text: str = ent_attrib['text']
         self.e_type: str = ent_attrib['type']
         self.char_offset = ent_attrib['charOffset']
+        self.spans: List[Span] = self.set_spans()
 
     def __str__(self):
         return "Entity(%s, %s, %s, %s)" % (self.id, self.text, self.e_type, self.char_offset)
 
-    def get_spans(self):
+    def set_spans(self) -> List[Span]:
         spans = []
         for span in self.char_offset.split(','):
             limits = span.split('-')
             start = int(limits[0])
-            end = int(limits[1]) + 1
+            end = int(limits[1])
             spans.append(Span(start, end))
         return spans
+
+    def get_spans(self) -> List[Tuple[int, int]]:
+        return [(span.start, span.end) for span in self.spans]
 
 
 class Pair:
@@ -76,7 +80,7 @@ class Sentence:
     def get_examples(self):
         pair_id: List[str] = []
         sentence: List[str] = []
-        label: List[int] = []
+        label: List = []
         e1_span: List = []
         e2_span: List = []
         for pair in self.pairs:
@@ -85,8 +89,11 @@ class Sentence:
             label.append(pair.label)
             e1_span.append(self.get_entity(pair.e1).get_spans())
             e2_span.append(self.get_entity(pair.e2).get_spans())
-        example_df = pd.DataFrame({'pair_id': pair_id, 'sentence': sentence, 'label': label,
-                                   'e1_span': e1_span, 'e2_span': e2_span}).astype({'label': 'int32'})
+        example_df = pd.DataFrame({'pair_id': pair_id, 'sentence': sentence,
+                                   'e1_span': e1_span, 'e2_span': e2_span})
+        if None not in label:
+            example_df['label'] = label
+            example_df = example_df.astype({'label': int})
         return example_df
 
 

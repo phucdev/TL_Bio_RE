@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from typing import List
+from typing import List, Tuple
 from tlbiore.data.corpus import Span
 from sklearn.model_selection import train_test_split
 
@@ -8,19 +8,19 @@ from sklearn.model_selection import train_test_split
 class SpanUtils:
 
     @staticmethod
-    def equals(span_a: Span, span_b: Span):
+    def equals(span_a: Span, span_b: Span) -> bool:
         return span_a.start == span_b.start and span_a.end == span_b.end
 
     @staticmethod
-    def contains(span_a: Span, span_b: Span):
+    def contains(span_a: Span, span_b: Span) -> bool:
         return span_a.start <= span_b.start and span_a.end >= span_b.end
 
     @staticmethod
-    def intersects(span_a: Span, span_b: Span):
+    def intersects(span_a: Span, span_b: Span) -> bool:
         return span_a.start < span_b.end and span_a.end > span_b.start
 
     @staticmethod
-    def intersects_any(spans_a: List[Span], spans_b: List[Span]):
+    def intersects_any(spans_a: List[Span], spans_b: List[Span]) -> bool:
         for span_a in spans_a:
             for span_b in spans_b:
                 if SpanUtils.intersects(span_a, span_b):
@@ -28,11 +28,11 @@ class SpanUtils:
         return False
 
     @staticmethod
-    def get_span_with_no(entity_no: int, spans: List[Span]):
-        return [(entity_no, span.start, span.end) for span in spans]
+    def get_span_with_no(entity_no: int, spans: List[Tuple[int, int]]) -> List[Tuple[int, int, int]]:
+        return [(entity_no, span[0], span[1]) for span in spans]
 
 
-def split_sentence(span_list, sentence: str, include_entities=False):
+def split_sentence(span_list, sentence: str, include_entities=False) -> List[str]:
     """
     :param
     span_list : List of spans for each entity.
@@ -86,21 +86,13 @@ def train_dev_test_split(object_list, split_ratio=(0.8, 0.1, 0.1)):
         return train_examples, dev_examples, test_examples
 
 
-def export_tsv(df, out):
-    """
-    Deletes span columns
-    Then exports to out path
-    """
-    data = df.copy()[['pair_id', 'sentence', 'label']]
+def export_tsv(df: pd.DataFrame, out, with_label=True):
+    data = df.drop('label', 1) if 'label' in df.columns and not with_label else df
     os.makedirs(os.path.dirname(out), exist_ok=True)
     data.to_csv(out, sep='\t', index=False, header=False)
 
 
-def export_jsonl(df, out):
-    """
-    Deletes span columns
-    Then exports to out path
-    """
-    data = df.copy()[['pair_id', 'sentence', 'label']]
+def export_jsonl(df: pd.DataFrame, out, with_label=True):
+    data = df.drop('label', 1) if 'label' in df.columns and not with_label else df
     os.makedirs(os.path.dirname(out), exist_ok=True)
     data.to_json(out, orient='records', lines=True)
