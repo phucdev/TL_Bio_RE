@@ -5,6 +5,7 @@ Transfer Learning for Biomedical Relation Extraction Seminar. Applying BioBERT &
 
 Clone the repository, create a python virtual environment and install the requirements.
 
+Download the train and test data (AIMed, BioInfer).
 Use `Korpusdaten-Bearbeiten.ipynb` to process corpora, do train-dev-test split and transform data according to the papers:
 
 - "A BERT-based Universal Model for Both Within- and Cross-sentence Clinical Temporal Relation Extraction" 
