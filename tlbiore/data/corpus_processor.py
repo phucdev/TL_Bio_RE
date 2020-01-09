@@ -54,9 +54,9 @@ def add_markers(example: pd.Series, e1_start: str, e1_end: str, e2_start: str, e
         idx += 1    # +1 increment for loop
 
         if entity_no == 1:
-            new_e1_spans.append(Tuple(start, end))
+            new_e1_spans.append((start, end))
         else:
-            new_e2_spans.append(Tuple(start, end))
+            new_e2_spans.append((start, end))
 
     example['sentence'] = ''.join(sentence_parts)
     example['e1_span'] = new_e1_spans
@@ -91,9 +91,9 @@ def anonymize_entities(example: pd.Series, anon: str):
         idx += 1  # +1 increment for loop
 
         if entity_no == 1:
-            new_e1_spans.append(Tuple(start, end))
+            new_e1_spans.append((start, end))
         else:
-            new_e2_spans.append(Tuple(start, end))
+            new_e2_spans.append((start, end))
 
     example['sentence'] = ''.join(sentence_parts)
     example['e1_span'] = new_e1_spans

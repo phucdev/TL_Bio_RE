@@ -32,7 +32,7 @@ class Entity:
         for span in self.char_offset.split(','):
             limits = span.split('-')
             start = int(limits[0])
-            end = int(limits[1])
+            end = int(limits[1])+1
             spans.append(Span(start, end))
         return spans
 
@@ -45,7 +45,10 @@ class Pair:
         self.id: str = pair_attrib['id']
         self.e1: Entity = pair_attrib['e1']
         self.e2: Entity = pair_attrib['e2']
-        self.label: int = 1 if pair_attrib['interaction'] == 'True' else 0
+        if 'interaction' in pair_attrib.keys():
+            self.label = 1 if pair_attrib['interaction'] == 'True' else 0
+        else:
+            self.label = None
 
     def __str__(self):
         return "Pair()(%s, %s, %s, %s)" % (self.id, self.e1, self.e2, self.label)
@@ -114,7 +117,7 @@ class Document:
 
     def get_examples(self):
         sentence_examples = [sentence.get_examples() for sentence in self.sentences]
-        return pd.concat(sentence_examples).reset_index(drop=True)
+        return pd.concat(sentence_examples, sort=False).reset_index(drop=True)
 
 
 class Corpus:
@@ -133,4 +136,4 @@ class Corpus:
 
     def get_examples(self):
         document_examples = [document.get_examples() for document in self.documents]
-        return pd.concat(document_examples).reset_index(drop=True)
+        return pd.concat(document_examples, sort=False).reset_index(drop=True)
