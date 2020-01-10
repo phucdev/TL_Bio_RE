@@ -29,11 +29,9 @@ def process_corpus(xml_file, corpus_id='PPI_corpus'):
 
 
 def add_markers(example: pd.Series, e1_start: str, e1_end: str, e2_start: str, e2_end: str):
-    entity_spans = utils.SpanUtils.get_span_with_no(1, example['e1_span'])
-    entity_spans.extend(utils.SpanUtils.get_span_with_no(2, example['e2_span']))
-
-    # Idea is to generate span triples and then replace them
-    entity_spans.sort(key=lambda trip: trip[1])
+    e1_span = utils.SpanUtils.get_span_with_no(1, example['e1_span'])
+    e2_span = utils.SpanUtils.get_span_with_no(2, example['e2_span'])
+    entity_spans = utils.SpanUtils.merge_span_lists(e1_span, e2_span)
 
     sentence_parts = utils.split_sentence(entity_spans, example['sentence'],
                                           include_entities=True)
@@ -70,19 +68,18 @@ def anonymize_entities(example: pd.Series, anon: str):
     example: data frame
     anon: to anonymize entities with
     """
-    new_e1_spans = []
-    new_e2_spans = []
-    entity_spans = utils.SpanUtils.get_span_with_no(1, example['e1_span'])
-    entity_spans.extend(utils.SpanUtils.get_span_with_no(2, example['e2_span']))
-
-    # Idea is to generate span triples and then replace them
-    entity_spans.sort(key=lambda trip: trip[1])
+    e1_span = utils.SpanUtils.get_span_with_no(1, example['e1_span'])
+    e2_span = utils.SpanUtils.get_span_with_no(2, example['e2_span'])
+    entity_spans = utils.SpanUtils.merge_span_lists(e1_span, e2_span)
 
     sentence_parts = utils.split_sentence(entity_spans, example['sentence'])
 
     idx = 1
-    for triple in entity_spans:
-        entity_no, _, _ = triple
+    new_e1_spans = []
+    new_e2_spans = []
+
+    for span in entity_spans:
+        entity_no, _, _ = span
         # TODO Special case in BioInfer with overlapping spans
         start = len(''.join(sentence_parts[:idx]))  # ugly hack to recalculate start index
         sentence_parts.insert(idx, anon)

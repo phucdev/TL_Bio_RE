@@ -1,35 +1,56 @@
 import pandas as pd
 import os
 from typing import List, Tuple
-from tlbiore.data.corpus import Span
 from sklearn.model_selection import train_test_split
+
+
+START = 1
+END = 2
 
 
 class SpanUtils:
 
     @staticmethod
-    def equals(span_a: Span, span_b: Span) -> bool:
-        return span_a.start == span_b.start and span_a.end == span_b.end
+    def equals(span_a, span_b) -> bool:
+        return span_a[START] == span_b[START] and span_a[END] == span_b[END]
 
     @staticmethod
-    def contains(span_a: Span, span_b: Span) -> bool:
-        return span_a.start <= span_b.start and span_a.end >= span_b.end
+    def contains(span_a, span_b) -> bool:
+        """
+        :return: true if span_a contains span_b, false otherwise
+        """
+        return span_a[START] <= span_b[START] and span_a[END] >= span_b[END]
 
     @staticmethod
-    def intersects(span_a: Span, span_b: Span) -> bool:
-        return span_a.start < span_b.end and span_a.end > span_b.start
-
-    @staticmethod
-    def intersects_any(spans_a: List[Span], spans_b: List[Span]) -> bool:
-        for span_a in spans_a:
-            for span_b in spans_b:
-                if SpanUtils.intersects(span_a, span_b):
-                    return True     # TODO or return all the intersecting span pairs?
-        return False
+    def intersects(span_a, span_b) -> bool:
+        return span_a[START] < span_b[END] and span_a[END] > span_b[START]
 
     @staticmethod
     def get_span_with_no(entity_no: int, spans: List[Tuple[int, int]]) -> List[Tuple[int, int, int]]:
         return [(entity_no, span[0], span[1]) for span in spans]
+
+    @staticmethod
+    def merge_span_lists(e1_spans, e2_spans):
+        """
+        :param e1_spans:
+        :param e2_spans:
+        :return: list of filtered and merged spans
+        """
+
+        spans = e1_spans.copy()
+        spans.extend(e2_spans)
+
+        filtered_spans = spans.copy()
+        for idx1, span1 in enumerate(spans):
+            for idx2, span2 in enumerate(spans):
+                if idx2 <= idx1:
+                    continue
+                if SpanUtils.contains(span1, span2):
+                    filtered_spans.remove(span2)
+                elif SpanUtils.contains(span2, span1):
+                    filtered_spans.remove(span1)
+        filtered_spans.sort(key=lambda span: span[START])
+        return filtered_spans
 
 
 def split_sentence(span_list, sentence: str, include_entities=False) -> List[str]:
@@ -55,11 +76,11 @@ def split_sentence(span_list, sentence: str, include_entities=False) -> List[str
     sentence_array: List[str] = []
     start_idx = 0
     for idx, triple in enumerate(span_list):
-        sentence_array.append(sentence[start_idx:triple[1]])
+        sentence_array.append(sentence[start_idx:triple[START]])
         if include_entities:
-            sentence_array.append(sentence[triple[1]:triple[2]])
-        start_idx = triple[2]
-    sentence_array.append(sentence[span_list[-1][2]:])
+            sentence_array.append(sentence[triple[START]:triple[END]])
+        start_idx = triple[END]
+    sentence_array.append(sentence[span_list[-1][END]:])
     return sentence_array
 
 
