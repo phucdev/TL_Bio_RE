@@ -39,8 +39,7 @@ def add_markers(example: pd.Series, e1_start: str, e1_end: str, e2_start: str, e
     e2_span = utils.SpanUtils.get_spans_with_no(2, example_copy['e2_span'])
     entity_spans = utils.SpanUtils.merge_span_lists(e1_span, e2_span)
 
-    sentence_parts = utils.split_sentence(entity_spans, example_copy['sentence'],
-                                          include_entities=True)
+    sentence_parts = utils.get_sentence_blocks(entity_spans, example_copy['sentence'])
 
     idx = 1
     new_e1_spans = []
@@ -77,9 +76,11 @@ def anonymize_entities(example: pd.Series, anon: str):
 
     e1_spans = utils.SpanUtils.get_spans_with_no(1, example_copy['e1_span'])
     e2_spans = utils.SpanUtils.get_spans_with_no(2, example_copy['e2_span'])
-    filtered_spans = utils.SpanUtils.merge_span_lists(e1_spans, e2_spans, rm_contained=True)
+    merged_spans = utils.SpanUtils.merge_span_lists(e1_spans, e2_spans)
+    filtered_spans = utils.SpanUtils.filter_span_list(merged_spans, rm_duplicates=True, rm_contained=True)
 
-    sentence_parts: List[str] = utils.split_sentence(filtered_spans, example_copy['sentence'])
+    sentence_parts: List[str] = utils.get_sentence_blocks(filtered_spans, example_copy['sentence'],
+                                                          include_entities=False)
 
     idx = 1
 

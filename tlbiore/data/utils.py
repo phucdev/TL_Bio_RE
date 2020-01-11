@@ -48,36 +48,60 @@ class SpanUtils:
         return [(entity_no, span[0], span[1]) for span in spans]
 
     @staticmethod
-    def merge_span_lists(e1_spans, e2_spans, rm_duplicates=False, rm_contained=False):
+    def filter_span_list(span_list, rm_duplicates=False, rm_contained=False):
+        filtered_spans = get_deep_copy(span_list)  # maybe .copy is enough?
+        for idx1, span1 in enumerate(span_list):
+            for idx2, span2 in enumerate(span_list):
+                if idx2 <= idx1:
+                    continue
+                if rm_duplicates:
+                    if SpanUtils.equals(span1, span2):
+                        filtered_spans.remove(span2)
+                        continue
+                if rm_contained:
+                    if SpanUtils.contains_not_equal(span1, span2):
+                        filtered_spans.remove(span2)
+                    elif SpanUtils.contains_not_equal(span2, span1):
+                        filtered_spans.remove(span1)
+        return filtered_spans
+
+    @staticmethod
+    def merge_span_lists(e1_spans, e2_spans):
         """
         :param e1_spans: list of spans for first entity
         :param e2_spans: list of spans for second entity
-        :param rm_contained:
-        :param rm_duplicates: subcase of contained
-        :return: list of merged spans (filtered if specified)
+        :return: list of sorted merged spans
         """
         spans = e1_spans.copy()
         spans.extend(e2_spans)
         spans.sort(key=lambda span: span[START])
 
-        if rm_duplicates or rm_contained:
-            filtered_spans = get_deep_copy(spans)   # maybe .copy is enough?
-            for idx1, span1 in enumerate(spans):
-                for idx2, span2 in enumerate(spans):
-                    if idx2 <= idx1:
-                        continue
-                    if rm_duplicates:
-                        if SpanUtils.equals(span1, span2):
-                            filtered_spans.remove(span2)
-                            continue
-                    if rm_contained:
-                        if SpanUtils.contains(span1, span2):
-                            filtered_spans.remove(span2)
-                        elif SpanUtils.contains(span2, span1):
-                            filtered_spans.remove(span1)
-            return filtered_spans
-        else:
-            return spans
+        return spans
+
+
+def get_sentence_blocks(span_list, sentence: str, include_entities=True) -> List[str]:
+    """
+    Similarly splits sentences at (unique) span indices from span_list
+    :param include_entities: if set to false use different splitting method
+    :param span_list: combined span list of both entities
+    :param sentence:
+    :return:
+    """
+    if not include_entities:
+        return split_sentence(span_list, sentence)
+    else:
+        # Retrieve indices where to split sentence into blocks
+        split_points = SpanUtils.get_split_points(span_list)
+
+        sentence_array: List[str] = []
+
+        start_idx = 0
+        for split_point in split_points:
+            sentence_array.append(sentence[start_idx:split_point])
+            start_idx = split_point
+        sentence_array.append(sentence[split_points[-1]:])
+
+        return sentence_array
 
 
 def split_sentence(span_list, sentence, include_entities=False) -> List[str]:
@@ -113,27 +137,6 @@ def split_sentence(span_list, sentence, include_entities=False) -> List[str]:
             sentence_array.append(sentence[triple[START]:triple[END]])
         start_idx = triple[END]
     sentence_array.append(sentence[span_list[-1][END]:])
-    return sentence_array
-
-
-def get_sentence_blocks(span_list, sentence: str) -> List[str]:
-    """
-    Similarly splits sentences at (unique) span indices, but always includes entities
-    :param span_list: combined span list of both entities
-    :param sentence:
-    :return:
-    """
-    # Retrieve indices where to split sentence into blocks
-    split_points = SpanUtils.get_split_points(span_list)
-
-    sentence_array: List[str] = []
-
-    start_idx = 0
-    for split_point in split_points:
-        sentence_array.append(sentence[start_idx:split_point])
-        start_idx = split_point
-    sentence_array.append(sentence[split_points[-1]:])
-
     return sentence_array
 
 
