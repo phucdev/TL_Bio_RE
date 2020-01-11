@@ -36,6 +36,14 @@ class SpanUtils:
         return span_a[START] < span_b[END] and span_a[END] > span_b[START]
 
     @staticmethod
+    def get_split_points(span_list):
+        # Flatten span_list and filter out duplicate indices
+        collected_indices = np.asarray(span_list)[:, 1:]
+        split_points = list(np.unique(collected_indices.flatten()))
+        assert len(split_points) > 1
+        return split_points
+
+    @staticmethod
     def get_spans_with_no(entity_no: int, spans: List[Tuple[int, int]]) -> List[Tuple[int, int, int]]:
         return [(entity_no, span[0], span[1]) for span in spans]
 
@@ -99,7 +107,7 @@ def split_sentence(span_list, sentence, include_entities=False) -> List[str]:
     sentence_array: List[str] = []
 
     start_idx = 0
-    for idx, triple in enumerate(span_list):
+    for triple in span_list:
         sentence_array.append(sentence[start_idx:triple[START]])
         if include_entities:
             sentence_array.append(sentence[triple[START]:triple[END]])
@@ -108,12 +116,25 @@ def split_sentence(span_list, sentence, include_entities=False) -> List[str]:
     return sentence_array
 
 
-def get_sentence_blocks(span_list, sentence: str, include_entities=False) -> List[str]:
+def get_sentence_blocks(span_list, sentence: str) -> List[str]:
+    """
+    Similarly splits sentences at (unique) span indices, but always includes entities
+    :param span_list: combined span list of both entities
+    :param sentence:
+    :return:
+    """
     # Retrieve indices where to split sentence into blocks
-    collected_indices = np.asarray(span_list)[:, 1:]
-    split_points = list(np.unique(collected_indices.flatten()))
+    split_points = SpanUtils.get_split_points(span_list)
 
-    return ['a']
+    sentence_array: List[str] = []
+
+    start_idx = 0
+    for split_point in split_points:
+        sentence_array.append(sentence[start_idx:split_point])
+        start_idx = split_point
+    sentence_array.append(sentence[split_points[-1]:])
+
+    return sentence_array
 
 
 def train_dev_test_split(object_list, split_ratio=(0.8, 0.1, 0.1)):

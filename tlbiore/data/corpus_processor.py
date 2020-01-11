@@ -1,4 +1,3 @@
-import time
 from lxml import etree
 from tlbiore.data.corpus import *
 from tlbiore.data import utils
@@ -32,14 +31,16 @@ def process_corpus(xml_file, corpus_id='PPI_corpus'):
 def add_markers(example: pd.Series, e1_start: str, e1_end: str, e2_start: str, e2_end: str):
     example_copy = utils.get_deep_copy(example)
 
+    # uncomment if we want no double markers for equal spans, when the same markers are used for both entities,
+    # also pass as argument to merge_span_lists
+    # rm_duplicates = True if e1_start == e2_start and e1_end == e2_end else False
+
     e1_span = utils.SpanUtils.get_spans_with_no(1, example_copy['e1_span'])
     e2_span = utils.SpanUtils.get_spans_with_no(2, example_copy['e2_span'])
     entity_spans = utils.SpanUtils.merge_span_lists(e1_span, e2_span)
 
     sentence_parts = utils.split_sentence(entity_spans, example_copy['sentence'],
                                           include_entities=True)
-
-    unique_markers = False if e1_start == e2_start and e1_end == e2_end else True   # no double markers for equal spans
 
     idx = 1
     new_e1_spans = []
@@ -59,19 +60,6 @@ def add_markers(example: pd.Series, e1_start: str, e1_end: str, e2_start: str, e
             new_e1_spans.append((new_start, new_end))
         else:
             new_e2_spans.append((new_start, new_end))
-        """
-        # Span correction code specifically for anonymization
-        for span_idx, span in example_copy['e1_span']:
-            if utils.SpanUtils.contains((start, end), span):
-                new_start = start + offset
-                new_end = new_start + len(anon)
-                example_copy['e1_span'][span_idx] = (new_start, new_end)
-        for span_idx, span in example_copy['e2_span']:
-            if utils.SpanUtils.contains((start, end), span):
-                new_start = start + offset
-                new_end = new_start + len(anon)
-                example_copy['e2_span'][span_idx] = (new_start, new_end)
-        """
 
     example_copy['sentence'] = ''.join(sentence_parts)
     example_copy['e1_span'] = new_e1_spans
