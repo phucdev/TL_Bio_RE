@@ -35,35 +35,56 @@ def add_markers(example: pd.Series, e1_start: str, e1_end: str, e2_start: str, e
     # also pass as argument to merge_span_lists
     # rm_duplicates = True if e1_start == e2_start and e1_end == e2_end else False
 
-    e1_span = utils.SpanUtils.get_spans_with_no(1, example_copy['e1_span'])
-    e2_span = utils.SpanUtils.get_spans_with_no(2, example_copy['e2_span'])
-    entity_spans = utils.SpanUtils.merge_span_lists(e1_span, e2_span)
+    e1_spans = utils.SpanUtils.get_spans_with_no(1, example_copy['e1_span'])
+    e2_spans = utils.SpanUtils.get_spans_with_no(2, example_copy['e2_span'])
+    entity_spans = utils.SpanUtils.merge_span_lists(e1_spans, e2_spans)
 
     sentence_parts = utils.get_sentence_blocks(entity_spans, example_copy['sentence'])
 
-    idx = 1
-    new_e1_spans = []
-    new_e2_spans = []
+    new_sentence = utils.get_deep_copy(sentence_parts)
 
-    for triple in entity_spans:
-        entity_no, _, _ = triple
-        new_start = len(''.join(sentence_parts[:idx]))  # ugly hack to recalculate start index
-        sentence_parts.insert(idx, e1_start if entity_no == 1 else e2_start)
-        idx += 2    # +1 start marker, +1 entity itself
-        sentence_parts.insert(idx, e1_end if entity_no == 1 else e2_end)
-        idx += 1    # +1 end marker
-        new_end = len(''.join(sentence_parts[:idx]))  # ugly hack to recalculate end index
-        idx += 1    # +1 increment for loop
+    block_offset = 0
+    char_offset = 0
 
-        if entity_no == 1:
-            new_e1_spans.append((new_start, new_end))
-        else:
-            new_e2_spans.append((new_start, new_end))
+    output_id = 'AIMed.d3.s33.p0'   # TODO
 
-    example_copy['sentence'] = ''.join(sentence_parts)
-    example_copy['e1_span'] = new_e1_spans
-    example_copy['e2_span'] = new_e2_spans
+    for idx, part in enumerate(sentence_parts):
+        span_no = len(''.join(sentence_parts[:idx]))    # or plus one?, span_start
 
+        # TODO: how to deal with contained entities, cosmetic error (# $ e1 # $)
+        for span_idx, span in enumerate(e1_spans):
+            _, start, end = span
+            if span_no == start:
+                new_sentence.insert(idx + block_offset, e1_start)
+                new_start = start+char_offset
+                example_copy['e1_span'][span_idx] = (new_start, end)
+                block_offset += 1
+                char_offset += len(e1_start)
+            elif span_no == end:
+                new_sentence.insert(idx + block_offset, e1_end)
+                char_offset += len(e1_end)
+                new_start = example_copy['e1_span'][span_idx][0]
+                new_end = end+char_offset
+                example_copy['e1_span'][span_idx] = (new_start, new_end)
+                block_offset += 1
+
+        for span_idx, span in enumerate(e2_spans):
+            _, start, end = span
+            if span_no == start:
+                new_sentence.insert(idx + block_offset, e2_start)
+                new_start = start+char_offset
+                example_copy['e2_span'][span_idx] = (new_start, end)
+                block_offset += 1
+                char_offset += len(e2_start)
+            elif span_no == end:
+                new_sentence.insert(idx + block_offset, e2_end)
+                char_offset += len(e2_end)
+                new_start = example_copy['e2_span'][span_idx][0]
+                new_end = end+char_offset
+                example_copy['e2_span'][span_idx] = (new_start, new_end)
+                block_offset += 1
+
+    example_copy['sentence'] = ''.join(new_sentence)
     return example_copy
 
 
