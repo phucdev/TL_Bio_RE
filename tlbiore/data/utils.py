@@ -1,4 +1,5 @@
 import os
+import pickle
 import pandas as pd
 import numpy as np
 from typing import List, Tuple
@@ -85,6 +86,10 @@ def split_sentence(span_list, sentence, include_entities=False) -> List[str]:
     and for include_entities=True:
         ["Cytokines measurements during ", "IFN-alpha", " treatment showed a trend to decreasing levels of ",
         "IL-4", " at 4, 12, and 24 weeks."]
+
+    {"pair_id":"AIMed.d3.s30.p0","sentence":"Temporally following this growth arrest, the cells develop a
+    senescence morphology and express @PROTEIN$e-associated beta-galactosidase (SA-beta-gal).",
+    "e1_span":[[95,104]],"e2_span":[[95,104]]}
     """
     sentence_array: List[str] = []
 
@@ -127,6 +132,10 @@ def train_dev_test_split(object_list, split_ratio=(0.8, 0.1, 0.1)):
         test_examples = pd.concat([elem.get_examples() for elem in test]).reset_index(drop=True)
 
         return train_examples, dev_examples, test_examples
+
+
+def get_deep_copy(obj):
+    return pickle.loads(pickle.dumps(obj))
 
 
 def export_tsv(df: pd.DataFrame, out, with_label=True):
