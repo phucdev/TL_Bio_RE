@@ -27,9 +27,9 @@ local bert_model = "models/biobert_v1.1._pubmed/";
             }
         }
     },
-    "train_data_path": "data/lin/train.jsonl",
-    "validation_data_path": data/lin/dev.jsonl,
-    "test_data_path": data/lin/train.jsonl,
+    "train_data_path": "data/sentencewise/lin/train.jsonl",
+    "validation_data_path": data/sentencewise/lin/dev.jsonl,
+    "test_data_path": data/lin/sentencewise/test.jsonl,
     "evaluate_on_test": true,
     "model": {
         "type": "bert_for_classification",
