@@ -4,7 +4,7 @@
 
 #
 # edit these variables before running script
-DATASET='sentencewise/lin'
+DATASET='sentencewise/lee'
 
 #export BERT_VOCAB=/net/nfs.corp/s2-research/scibert/scibert_scivocab_uncased/vocab.txt
 #export BERT_WEIGHTS=/net/nfs.corp/s2-research/scibert/scibert_scivocab_uncased/weights.tar.gz

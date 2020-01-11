@@ -17,9 +17,6 @@ local bert_model = "models/biobert_v1.1._pubmed/";
     "dataset_reader": {
         "lazy": false,
         "type": "new_ppi_dataset_reader",
-        "tokenizer": {
-            "type": "bert-basic"
-        },
         "token_indexers": {
             "bert": {
                 "type": "bert-pretrained",
@@ -28,8 +25,8 @@ local bert_model = "models/biobert_v1.1._pubmed/";
         }
     },
     "train_data_path": "data/sentencewise/lin/train.jsonl",
-    "validation_data_path": data/sentencewise/lin/dev.jsonl,
-    "test_data_path": data/lin/sentencewise/test.jsonl,
+    "validation_data_path": "data/sentencewise/lin/dev.jsonl",
+    "test_data_path": "data/sentencewise/lin/test.jsonl",
     "evaluate_on_test": true,
     "model": {
         "type": "bert_for_classification",
