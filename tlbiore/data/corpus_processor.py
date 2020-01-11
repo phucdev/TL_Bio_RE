@@ -29,12 +29,14 @@ def process_corpus(xml_file, corpus_id='PPI_corpus'):
 
 
 def add_markers(example: pd.Series, e1_start: str, e1_end: str, e2_start: str, e2_end: str):
-    e1_span = utils.SpanUtils.get_span_with_no(1, example['e1_span'])
-    e2_span = utils.SpanUtils.get_span_with_no(2, example['e2_span'])
+    e1_span = utils.SpanUtils.get_spans_with_no(1, example['e1_span'])
+    e2_span = utils.SpanUtils.get_spans_with_no(2, example['e2_span'])
     entity_spans = utils.SpanUtils.merge_span_lists(e1_span, e2_span)
 
     sentence_parts = utils.split_sentence(entity_spans, example['sentence'],
                                           include_entities=True)
+
+    unique_markers = False if e1_start == e2_start and e1_end == e2_end else True   # no double markers for equal spans
 
     idx = 1
     new_e1_spans = []
@@ -42,19 +44,31 @@ def add_markers(example: pd.Series, e1_start: str, e1_end: str, e2_start: str, e
 
     for triple in entity_spans:
         entity_no, _, _ = triple
-        # TODO Special case in BioInfer with overlapping spans
-        start = len(''.join(sentence_parts[:idx]))  # ugly hack to recalculate start index
+        new_start = len(''.join(sentence_parts[:idx]))  # ugly hack to recalculate start index
         sentence_parts.insert(idx, e1_start if entity_no == 1 else e2_start)
         idx += 2    # +1 start marker, +1 entity itself
         sentence_parts.insert(idx, e1_end if entity_no == 1 else e2_end)
         idx += 1    # +1 end marker
-        end = len(''.join(sentence_parts[:idx]))  # ugly hack to recalculate end index
+        new_end = len(''.join(sentence_parts[:idx]))  # ugly hack to recalculate end index
         idx += 1    # +1 increment for loop
 
         if entity_no == 1:
-            new_e1_spans.append((start, end))
+            new_e1_spans.append((new_start, new_end))
         else:
-            new_e2_spans.append((start, end))
+            new_e2_spans.append((new_start, new_end))
+        """
+        # Span correction code specifically for anonymization
+        for span_idx, span in example['e1_span']:
+            if utils.SpanUtils.contains((start, end), span):
+                new_start = start + offset
+                new_end = new_start + len(anon)
+                example['e1_span'][span_idx] = (new_start, new_end)
+        for span_idx, span in example['e2_span']:
+            if utils.SpanUtils.contains((start, end), span):
+                new_start = start + offset
+                new_end = new_start + len(anon)
+                example['e2_span'][span_idx] = (new_start, new_end)
+        """
 
     example['sentence'] = ''.join(sentence_parts)
     example['e1_span'] = new_e1_spans
@@ -68,33 +82,33 @@ def anonymize_entities(example: pd.Series, anon: str):
     example: data frame
     anon: to anonymize entities with
     """
-    e1_span = utils.SpanUtils.get_span_with_no(1, example['e1_span'])
-    e2_span = utils.SpanUtils.get_span_with_no(2, example['e2_span'])
-    entity_spans = utils.SpanUtils.merge_span_lists(e1_span, e2_span)
+    e1_spans = utils.SpanUtils.get_spans_with_no(1, example['e1_span'])
+    e2_spans = utils.SpanUtils.get_spans_with_no(2, example['e2_span'])
+    entity_spans, filtered_spans = utils.SpanUtils.merge_span_lists(e1_spans, e2_spans, return_filtered=True)
 
-    sentence_parts = utils.split_sentence(entity_spans, example['sentence'])
+    sentence_parts: List[str] = utils.split_sentence(filtered_spans, example['sentence'], include_entities=True)
 
     idx = 1
-    new_e1_spans = []
-    new_e2_spans = []
+    offset = 0
 
-    for span in entity_spans:
-        entity_no, _, _ = span
-        # TODO Special case in BioInfer with overlapping spans
-        start = len(''.join(sentence_parts[:idx]))  # ugly hack to recalculate start index
-        sentence_parts.insert(idx, anon)
-        idx += 1  # +1 anonymized entity
-        end = len(''.join(sentence_parts[:idx]))  # ugly hack to recalculate end index
-        idx += 1  # +1 increment for loop
+    for filtered_span in filtered_spans:
+        entity_no, start, end = filtered_span
+        # Span correction code specifically for anonymization
+        for span_idx, span in enumerate(e1_spans):
+            if utils.SpanUtils.contains(filtered_span, span):
+                new_start = start + offset
+                new_end = new_start + len(anon)
+                example['e1_span'][span_idx] = (new_start, new_end)
+        for span_idx, span in enumerate(e2_spans):
+            if utils.SpanUtils.contains(filtered_span, span):
+                new_start = start + offset
+                new_end = new_start + len(anon)
+                example['e2_span'][span_idx] = (new_start, new_end)
 
-        if entity_no == 1:
-            new_e1_spans.append((start, end))
-        else:
-            new_e2_spans.append((start, end))
+        offset += len(anon) - len(sentence_parts[idx])
+        sentence_parts[idx] = anon
 
-    example['sentence'] = ''.join(sentence_parts)
-    example['e1_span'] = new_e1_spans
-    example['e2_span'] = new_e2_spans
+        idx += 1
 
     example['sentence'] = ''.join(sentence_parts)
     return example

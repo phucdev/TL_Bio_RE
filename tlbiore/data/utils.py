@@ -1,5 +1,6 @@
-import pandas as pd
 import os
+import pandas as pd
+import numpy as np
 from typing import List, Tuple
 from sklearn.model_selection import train_test_split
 
@@ -22,42 +23,54 @@ class SpanUtils:
         return span_a[START] <= span_b[START] and span_a[END] >= span_b[END]
 
     @staticmethod
+    def contains_not_equal(span_a, span_b) -> bool:
+        """
+        :return: true if span_a contains span_b, but is not equal to span_b, false otherwise
+        """
+        return (span_a[START] < span_b[START] and span_a[END] >= span_b[END]) or \
+               (span_a[START] == span_b[START] and span_a[END] > span_b[END])
+
+    @staticmethod
     def intersects(span_a, span_b) -> bool:
         return span_a[START] < span_b[END] and span_a[END] > span_b[START]
 
     @staticmethod
-    def get_span_with_no(entity_no: int, spans: List[Tuple[int, int]]) -> List[Tuple[int, int, int]]:
+    def get_spans_with_no(entity_no: int, spans: List[Tuple[int, int]]) -> List[Tuple[int, int, int]]:
         return [(entity_no, span[0], span[1]) for span in spans]
 
     @staticmethod
-    def merge_span_lists(e1_spans, e2_spans):
+    def merge_span_lists(e1_spans, e2_spans, return_filtered=False):
         """
-        :param e1_spans:
-        :param e2_spans:
+
+        :param e1_spans: list of spans for first entity
+        :param e2_spans: list of spans for second entity
+        :param return_filtered: span list with duplicates, spans that are contained in others
         :return: list of filtered and merged spans
         """
-
         spans = e1_spans.copy()
         spans.extend(e2_spans)
+        spans.sort(key=lambda span: span[START])
 
-        filtered_spans = spans.copy()
-        for idx1, span1 in enumerate(spans):
-            for idx2, span2 in enumerate(spans):
-                if idx2 <= idx1:
-                    continue
-                if SpanUtils.contains(span1, span2):
-                    filtered_spans.remove(span2)
-                elif SpanUtils.contains(span2, span1):
-                    filtered_spans.remove(span1)
-        filtered_spans.sort(key=lambda span: span[START])
-        return filtered_spans
+        if return_filtered:
+            filtered_spans = spans.copy()
+            for idx1, span1 in enumerate(spans):
+                for idx2, span2 in enumerate(spans):
+                    if idx2 <= idx1:
+                        continue
+                    if SpanUtils.contains(span1, span2):
+                        filtered_spans.remove(span2)
+                    elif SpanUtils.contains(span2, span1):
+                        filtered_spans.remove(span1)
+            return spans, filtered_spans
+        else:
+            return spans
 
 
-def split_sentence(span_list, sentence: str, include_entities=False) -> List[str]:
+def split_sentence(span_list, sentence, include_entities=False) -> List[str]:
     """
     :param
-    span_list : List of spans for each entity.
-    sentence : Sentence string that will be split.
+    span_list: List of spans for each entity.
+    sentence: Sentence string that will be split.
     include_entities : Whether or not to include the entities in the output array.
 
     :returns
@@ -74,6 +87,7 @@ def split_sentence(span_list, sentence: str, include_entities=False) -> List[str
         "IL-4", " at 4, 12, and 24 weeks."]
     """
     sentence_array: List[str] = []
+
     start_idx = 0
     for idx, triple in enumerate(span_list):
         sentence_array.append(sentence[start_idx:triple[START]])
@@ -82,6 +96,14 @@ def split_sentence(span_list, sentence: str, include_entities=False) -> List[str
         start_idx = triple[END]
     sentence_array.append(sentence[span_list[-1][END]:])
     return sentence_array
+
+
+def get_sentence_blocks(span_list, sentence: str, include_entities=False) -> List[str]:
+    # Retrieve indices where to split sentence into blocks
+    collected_indices = np.asarray(span_list)[:, 1:]
+    split_points = list(np.unique(collected_indices.flatten()))
+
+    return ['a']
 
 
 def train_dev_test_split(object_list, split_ratio=(0.8, 0.1, 0.1)):
