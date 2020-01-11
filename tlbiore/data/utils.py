@@ -97,9 +97,12 @@ def get_sentence_blocks(span_list, sentence: str, include_entities=True) -> List
 
         start_idx = 0
         for split_point in split_points:
+            if split_point == 0:
+                continue
             sentence_array.append(sentence[start_idx:split_point])
             start_idx = split_point
-        sentence_array.append(sentence[split_points[-1]:])
+        if not split_points[-1] == len(sentence):
+            sentence_array.append(sentence[split_points[-1]:])
 
         return sentence_array
 
