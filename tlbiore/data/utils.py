@@ -40,29 +40,34 @@ class SpanUtils:
         return [(entity_no, span[0], span[1]) for span in spans]
 
     @staticmethod
-    def merge_span_lists(e1_spans, e2_spans, return_filtered=False):
+    def merge_span_lists(e1_spans, e2_spans, rm_duplicates=False, rm_contained=False):
         """
-
         :param e1_spans: list of spans for first entity
         :param e2_spans: list of spans for second entity
-        :param return_filtered: span list with duplicates, spans that are contained in others
-        :return: list of filtered and merged spans
+        :param rm_contained:
+        :param rm_duplicates: subcase of contained
+        :return: list of merged spans (filtered if specified)
         """
         spans = e1_spans.copy()
         spans.extend(e2_spans)
         spans.sort(key=lambda span: span[START])
 
-        if return_filtered:
-            filtered_spans = spans.copy()
+        if rm_duplicates or rm_contained:
+            filtered_spans = get_deep_copy(spans)   # maybe .copy is enough?
             for idx1, span1 in enumerate(spans):
                 for idx2, span2 in enumerate(spans):
                     if idx2 <= idx1:
                         continue
-                    if SpanUtils.contains(span1, span2):
-                        filtered_spans.remove(span2)
-                    elif SpanUtils.contains(span2, span1):
-                        filtered_spans.remove(span1)
-            return spans, filtered_spans
+                    if rm_duplicates:
+                        if SpanUtils.equals(span1, span2):
+                            filtered_spans.remove(span2)
+                            continue
+                    if rm_contained:
+                        if SpanUtils.contains(span1, span2):
+                            filtered_spans.remove(span2)
+                        elif SpanUtils.contains(span2, span1):
+                            filtered_spans.remove(span1)
+            return filtered_spans
         else:
             return spans
 

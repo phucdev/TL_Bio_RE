@@ -89,7 +89,7 @@ def anonymize_entities(example: pd.Series, anon: str):
 
     e1_spans = utils.SpanUtils.get_spans_with_no(1, example_copy['e1_span'])
     e2_spans = utils.SpanUtils.get_spans_with_no(2, example_copy['e2_span'])
-    entity_spans, filtered_spans = utils.SpanUtils.merge_span_lists(e1_spans, e2_spans, return_filtered=True)
+    filtered_spans = utils.SpanUtils.merge_span_lists(e1_spans, e2_spans, rm_contained=True)
 
     sentence_parts: List[str] = utils.split_sentence(filtered_spans, example_copy['sentence'])
 
