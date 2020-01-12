@@ -5,6 +5,7 @@
 #
 # edit these variables before running script
 DATASET='sentencewise/lee'
+dataset_size=10304  # no of examples in train file
 
 #export BERT_VOCAB=/net/nfs.corp/s2-research/scibert/scibert_scivocab_uncased/vocab.txt
 #export BERT_WEIGHTS=/net/nfs.corp/s2-research/scibert/scibert_scivocab_uncased/weights.tar.gz
@@ -28,7 +29,7 @@ export TEST_PATH=data/$DATASET/test.jsonl
 
 export CUDA_DEVICE=0
 
-export DROPOUT_RATE=0.1
+export GRAD_ACCUM_BATCH_SIZE=32
 export NUM_EPOCHS=4
 export LEARNING_RATE=0.001
 

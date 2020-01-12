@@ -181,6 +181,7 @@ class BertTextClassifier(TextClassifier):
         """
         embedded_text = self.text_field_embedder(text)  # BERT
         pooled = self.dropout(embedded_text[:, 0, :])   # CLS token representation
+        # TODO how to get entity representation?
         logits = self.classifier_feedforward(pooled)
         class_probs = F.softmax(logits, dim=1)
 
@@ -195,25 +196,6 @@ class BertTextClassifier(TextClassifier):
                 metric(class_probs, label)
             self.label_accuracy(logits, label)
         return output_dict
-
-    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        metric_dict = {}
-
-        sum_f1 = 0.0
-        for name, metric in self.label_f1_metrics.items():
-            metric_val = metric.get_metric(reset)
-            if self.verbose_metrics:
-                metric_dict[name + '_P'] = metric_val[0]
-                metric_dict[name + '_R'] = metric_val[1]
-                metric_dict[name + '_F1'] = metric_val[2]
-            sum_f1 += metric_val[2]
-
-        names = list(self.label_f1_metrics.keys())
-        total_len = len(names)
-        average_f1 = sum_f1 / total_len
-        metric_dict['average_F1'] = average_f1
-        metric_dict['accuracy'] = self.label_accuracy.get_metric(reset)
-        return metric_dict
 
 
 @Model.register("bert_for_ppi")

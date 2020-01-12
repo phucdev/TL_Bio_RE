@@ -22,7 +22,7 @@ class PPIDatasetReader(DatasetReader):
     The JSON could have other fields, too, but they are ignored.
     The output of ``read`` is a list of ``Instance`` s with the fields:
         pair_id: ``MetaDataField``
-        sentence: ``TextField``
+        tokens: ``TextField``
         label: ``LabelField``
     where the ``label`` indicates protein-protein-interaction.
     Parameters
@@ -61,23 +61,31 @@ class PPIDatasetReader(DatasetReader):
                 line_json = json.loads(line)
                 pair_id = line_json['pair_id']
                 sentence = line_json['sentence']
+                e1_span = line_json['e1_span']
+                e2_span = line_json['e2_span']
                 label = str(line_json['label'])
-                yield self.text_to_instance(sentence, label, pair_id)
+                yield self.text_to_instance(sentence, label, pair_id, e1_span, e2_span)
 
     @overrides
     def text_to_instance(self,
                          sentence: str,
                          label: str = None,
-                         pair_id: str = None) -> Instance:  # type: ignore
+                         pair_id: str = None,
+                         e1_span=None,
+                         e2_span=None) -> Instance:  # type: ignore
         sentence_tokens = self._tokenizer.tokenize(sentence)  # TODO: check compatibility with BioBERT
         fields = {
-            'sentence': TextField(sentence_tokens, self._token_indexers),
+            'tokens': TextField(sentence_tokens, self._token_indexers),
         }
         if label is not None:
             fields['label'] = LabelField(label)
 
-        #if pair_id is not None:
-        #    fields['pair_id'] = MetadataField(pair_id)
+        """if pair_id is not None:
+            fields['pair_id'] = MetadataField(pair_id)
+        if e1_span is not None:
+            fields['e1_span'] = MetadataField(e1_span)
+        if e2_span is not None:
+            fields['e2_span'] = MetadataField(e2_span)"""
         return Instance(fields)
 
 
@@ -144,6 +152,6 @@ class NewPPIDatasetReader(DatasetReader):
         if label is not None:
             fields['label'] = LabelField(label)
 
-        #if pair_id is not None:
+        # if pair_id is not None:
         #    fields['pair_id'] = MetadataField(pair_id)
         return Instance(fields)
