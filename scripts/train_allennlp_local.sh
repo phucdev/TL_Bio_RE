@@ -7,9 +7,9 @@
 DATASET='sentencewise/lee'
 dataset_size=10304  # no of examples in train file
 
-#export BERT_VOCAB=/net/nfs.corp/s2-research/scibert/scibert_scivocab_uncased/vocab.txt
-#export BERT_WEIGHTS=/net/nfs.corp/s2-research/scibert/scibert_scivocab_uncased/weights.tar.gz
-export BERT_MODEL=models/biobert_v1.1._pubmed/
+export BERT_VOCAB=models/scibert_scivocab_uncased/vocab.txt
+export BERT_WEIGHTS=models/scibert_scivocab_uncased/weights.tar.gz
+#export BERT_MODEL=models/biobert_v1.1._pubmed/
 
 export DATASET_SIZE=$dataset_size
 
@@ -33,4 +33,4 @@ export GRAD_ACCUM_BATCH_SIZE=32
 export NUM_EPOCHS=4
 export LEARNING_RATE=0.001
 
-CUDA_VISIBLE_DEVICES=1 python -m allennlp.run train $CONFIG_FILE  --include-package tlbiore -s "$@"
+CUDA_VISIBLE_DEVICES=0 python -m allennlp.run train $CONFIG_FILE  --include-package tlbiore -s "$@"
