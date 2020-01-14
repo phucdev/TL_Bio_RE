@@ -143,17 +143,18 @@ def split_sentence(span_list, sentence, include_entities=False) -> List[str]:
     return sentence_array
 
 
-def train_dev_test_split(object_list, split_ratio=(0.8, 0.1, 0.1)):
+def train_dev_test_split(object_list, split_ratio=(0.8, 0.1, 0.1), seed=2018):
     """
     Performs train, dev, test split on a list
+    :param seed: 
     :param object_list: list of documents, sentences or pairs
     :param split_ratio: train, dev, test ratio
     :return: train, dev, test
     """
     train_size, dev_size, test_size = split_ratio
     # TODO: add stratify option for split on pair level, investigate same option for document/sentence level?
-    train, tmp = train_test_split(object_list, random_state=2018, train_size=train_size)
-    dev, test = train_test_split(tmp, random_state=2018, test_size=test_size / (test_size + dev_size))
+    train, tmp = train_test_split(object_list, random_state=seed, train_size=train_size)
+    dev, test = train_test_split(tmp, random_state=seed, test_size=test_size / (test_size + dev_size))
 
     if isinstance(train, pd.DataFrame) and isinstance(dev, pd.DataFrame) and isinstance(test, pd.DataFrame):
         return train, dev, test
