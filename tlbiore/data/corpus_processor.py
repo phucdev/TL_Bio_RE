@@ -1,13 +1,20 @@
 from lxml import etree
+from typing import Union
 from tlbiore.data.corpus import *
 from tlbiore.data import utils
 
 
-def process_corpora(file_list: List):
-    assert len(file_list) == 2  # TODO: only works for 2 corpora
-    corpora = [process_corpus(xml_file) for xml_file in file_list]
-    corpora[0].documents.extend(corpora[1].documents)
-    return corpora[0]
+def process_corpora(file_list: Union[List, str]):
+    if isinstance(file_list, str):
+        return process_corpus(file_list)
+    else:
+        assert isinstance(file_list, List)
+        corpora = [process_corpus(xml_file) for xml_file in file_list]
+        for idx, corpus in enumerate(corpora):
+            if idx == 0:
+                continue
+            corpora[0].documents.extend(corpus.documents)
+        return corpora[0]
 
 
 def process_corpus(xml_file, corpus_id='PPI_corpus'):
@@ -45,8 +52,6 @@ def add_markers(example: pd.Series, e1_start: str, e1_end: str, e2_start: str, e
 
     block_offset = 0
     char_offset = 0
-
-    output_id = 'AIMed.d3.s33.p0'   # TODO
 
     for idx, part in enumerate(sentence_parts):
         span_no = len(''.join(sentence_parts[:idx]))    # or plus one?, span_start
