@@ -67,7 +67,7 @@ def compute_metrics(preds, labels, average='macro'):
     assert len(preds) == len(labels)
     acc = (np.asarray(preds) == np.asarray(labels)).mean()
 
-    p, r, f1 = precision_recall_fscore_support(y_true=labels, y_pred=preds, average=average)
+    p, r, f1, _ = precision_recall_fscore_support(y_true=labels, y_pred=preds, average=average)
     return {
         "acc": acc,
         "precision": p,

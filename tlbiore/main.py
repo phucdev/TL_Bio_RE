@@ -45,6 +45,7 @@ if __name__ == '__main__':
     parser.add_argument("--train_file", default="train.tsv", type=str, help="Train file")
     parser.add_argument("--dev_file", default="dev.tsv", type=str, help="Dev file")
     parser.add_argument("--test_file", default="test.tsv", type=str, help="Test file")
+    parser.add_argument("--pred_file", default="pred.tsv", type=str, help="Predictions file")
     parser.add_argument("--label_file", default="label.txt", type=str, help="Label file")
 
     parser.add_argument("--pretrained_model_name", default="bert-base-uncased", required=False, help="Pretrained model name")
