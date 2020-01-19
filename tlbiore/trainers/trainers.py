@@ -33,7 +33,7 @@ class Trainer(object):
         self.model = RBERT(self.bert_config, args)
 
         # GPU or CPU
-        self.device = "cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu"
+        self.device = torch.device('cuda:0}') if torch.cuda.is_available() and not args.no_cuda else "cpu"
         self.model.to(self.device)
 
     def train(self):
@@ -192,7 +192,7 @@ class Trainer(object):
 
         self.model.eval()
 
-        for batch in tqdm(eval_dataloader, desc="Evaluating"):
+        for batch in tqdm(eval_dataloader, desc="Predicting"):
             batch = tuple(t.to(self.device) for t in batch)
             with torch.no_grad():
                 inputs = {'input_ids': batch[0],
@@ -216,7 +216,7 @@ class Trainer(object):
         preds = np.argmax(preds, axis=1)
 
         logger.info("***** Writing predictions to file *****")
-        write_prediction(self.args, self.args.eval_dir, preds)
+        write_prediction(self.args, self.args.output_dir, preds)
 
     def save_model(self):
         # Save model checkpoint (Overwrite)

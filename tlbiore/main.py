@@ -50,10 +50,11 @@ if __name__ == '__main__':
                         help="The input data dir. Should contain the .jsonl files (or other data files) for the task.")
     parser.add_argument("--model_dir", default="./model", type=str, help="Path to model")
     parser.add_argument("--eval_dir", default="./eval", type=str, help="Evaluation script, result directory")
+    parser.add_argument("--output_dir", default="./output", type=str, help="Where to write the predictions")
     parser.add_argument("--train_file", default="train.tsv", type=str, help="Train file")
     parser.add_argument("--dev_file", default="dev.tsv", type=str, help="Dev file")
     parser.add_argument("--test_file", default="test.tsv", type=str, help="Test file")
-    parser.add_argument("--pred_file", default="pred.tsv", type=str, help="Predictions file")
+    parser.add_argument("--pred_file", default="predict.tsv", type=str, help="Predictions file")
     parser.add_argument("--label_file", default="label.txt", type=str, help="Label file")
 
     parser.add_argument("--pretrained_model_name", default="bert-base-uncased", required=False,

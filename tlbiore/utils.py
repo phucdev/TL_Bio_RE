@@ -22,8 +22,8 @@ def load_tokenizer(args):
 
 
 def get_predict_pair_ids(args):
-    test_file = os.path.join(args.data_dir, args.test_file)
-    df = pd.read_csv(test_file, delimiter='\t', header=None, names=['pair_id', 'sentence'])
+    pred_file = os.path.join(args.data_dir, args.pred_file)
+    df = pd.read_csv(pred_file, delimiter='\t', header=None, names=['pair_id', 'sentence'])
     return df["pair_id"]
 
 
@@ -41,11 +41,16 @@ def write_prediction(args, output_dir, predictions):
         .format(len(pair_ids), len(pred_labels))
 
     df = pd.DataFrame({"pair_ids": pair_ids, "pred_labels": pred_labels})
-    aimed = df[df.pair_id.str.startswith("AIMed")]
-    bioinfer = df[df.pair_id.str.startswith("BioInfer")]
+    aimed = df[df.pair_ids.str.startswith("AIMed")]
+    bioinfer = df[df.pair_ids.str.startswith("BioInfer")]
 
-    aimed.to_csv(os.path.join(output_dir, "aimed_predictions.csv"), sep='\t', index=False, header=False)
-    bioinfer.to_csv(os.path.join(output_dir, "bioinfer_predictions.csv"), sep='\t', index=False, header=False)
+    aimed_path = os.path.join(output_dir, "aimed_predictions.csv")
+    os.makedirs(os.path.dirname(aimed_path), exist_ok=True)
+    bioinfer_path = os.path.join(output_dir, "bioinfer_predictions.csv")
+    os.makedirs(os.path.dirname(bioinfer_path), exist_ok=True)
+    
+    aimed.to_csv(aimed_path, sep='\t', index=False, header=False)
+    bioinfer.to_csv(bioinfer_path, sep='\t', index=False, header=False)
 
 
 def init_logger():

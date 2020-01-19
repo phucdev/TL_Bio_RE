@@ -2,6 +2,7 @@
 .idea
 notebooks/lightning_logs/
 notebooks/savepath/
+output/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
