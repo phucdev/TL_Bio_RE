@@ -1,1 +1,1 @@
-from tlbiore.models.models import BertTextClassifier
+from tlbiore.models.models import RBERT

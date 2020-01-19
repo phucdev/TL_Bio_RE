@@ -28,9 +28,7 @@ class PPIDatasetReader(object):
                 sentence = line[1]
                 if not self.args.no_lower_case:
                     sentence = sentence.lower()
-                # e1_span = line[2]
-                # e2_span = line[3]
-                label = self.relation_labels.index(line[4])
+                label = self.relation_labels.index(line[2])
                 if i % 1000 == 0:
                     logger.info(line)
                 if i % 500 == 0:

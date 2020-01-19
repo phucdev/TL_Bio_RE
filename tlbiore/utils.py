@@ -23,26 +23,29 @@ def load_tokenizer(args):
 
 def get_predict_pair_ids(args):
     test_file = os.path.join(args.data_dir, args.test_file)
-    df = pd.read_csv(test_file, delimiter='\t', header=None, names=['pair_id', 'sentence', 'span_e1', 'span_e2'])
-    return list(df.pair_id.values)
+    df = pd.read_csv(test_file, delimiter='\t', header=None, names=['pair_id', 'sentence'])
+    return df.pair_id
 
 
-def write_prediction(args, output_dir, preds):
+def write_prediction(args, output_dir, predictions):
     """
     For official evaluation script
     :param args:
     :param output_dir: prediction_dir_path
-    :param preds: [0,1,0,2,18,...]
+    :param predictions: [0,1,0,0,1,...]
     """
     relation_labels = get_label(args)
     pair_ids = get_predict_pair_ids(args)
+    pred_labels = [relation_labels[pred] for pred in predictions]
+    assert len(pair_ids) == len(pred_labels), "Lengths of pair ids and predicted labels do not match: {} vs. {}"\
+        .format(len(pair_ids), len(pred_labels))
 
-    output_file = os.path.join(output_dir, "predictions.csv")
+    df = pd.DataFrame({"pair_ids": pair_ids, "pred_labels": pred_labels})
+    aimed = df[df.pair_id.str.startswith("AIMed")]
+    bioinfer = df[df.pair_id.str.startswith("BioInfer")]
 
-    # TODO as a next step split AIMed and BioInfer into 2 output files
-    with open(output_file, 'w', encoding='utf-8') as f:
-        for pair_id, pred in zip(pair_ids, preds):
-            f.write("{}\t{}\n".format(pair_id, relation_labels[pred]))
+    aimed.to_csv(os.path.join(output_dir, "aimed_predictions.csv"), sep='\t', index=False, header=False)
+    bioinfer.to_csv(os.path.join(output_dir, "bioinfer_predictions.csv"), sep='\t', index=False, header=False)
 
 
 def init_logger():
