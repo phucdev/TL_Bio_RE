@@ -2,15 +2,16 @@ BERT=bert-base-cased
 BIOBERT=/vol/fob-vol6/nebenf13/truongph/Models/biobert_v1.1._pubmed_pytorch
 SCIBERT=/vol/fob-vol6/nebenf13/truongph/Models/scibert_scivocab_cased_pytorch
 
-DATA_DIR=/vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/data/ppi_hu/
-MODEL_NAME=bert_ali
+METHOD=ali
+PRETRAINED=$BIOBERT
+MODEL_NAME=biobert_ali
 
-CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=2 python3 /vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/tlbiore/main.py \
+CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=3 python3 /vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/tlbiore/main.py \
   --do_train \
   --do_eval \
   --task=ppi \
-  --data_dir=$DATA_DIR/ali \
-  --pretrained_model_name=$BERT \
+  --data_dir=/vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/data/ppi_hu/$METHOD \
+  --pretrained_model_name=$PRETRAINED \
   --model_dir=/vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/models/$MODEL_NAME \
   --max_seq_len=286 \
   --batch_size=16 \
