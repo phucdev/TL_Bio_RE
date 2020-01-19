@@ -172,7 +172,7 @@ class Trainer(object):
 
         if mode == 'test':
             # TODO add pair id
-            write_prediction(self.args, os.path.join(self.args.eval_dir, "proposed_answers.txt"), preds)
+            write_prediction(self.args, self.args.eval_dir, preds)
         return results
 
     def save_model(self):

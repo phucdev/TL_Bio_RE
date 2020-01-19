@@ -4,6 +4,7 @@ import logging
 
 import torch
 import numpy as np
+import pandas as pd
 from sklearn.metrics import precision_recall_fscore_support
 from transformers.tokenization_bert import BertTokenizer
 
@@ -20,17 +21,28 @@ def load_tokenizer(args):
     return tokenizer
 
 
-def write_prediction(args, output_file, preds):
+def get_predict_pair_ids(args):
+    test_file = os.path.join(args.data_dir, args.test_file)
+    df = pd.read_csv(test_file, delimiter='\t', header=None, names=['pair_id', 'sentence', 'span_e1', 'span_e2'])
+    return list(df.pair_id.values)
+
+
+def write_prediction(args, output_dir, preds):
     """
     For official evaluation script
     :param args:
-    :param output_file: prediction_file_path
+    :param output_dir: prediction_dir_path
     :param preds: [0,1,0,2,18,...]
     """
     relation_labels = get_label(args)
+    pair_ids = get_predict_pair_ids(args)
+
+    output_file = os.path.join(output_dir, "predictions.csv")
+
+    # TODO as a next step split AIMed and BioInfer into 2 output files
     with open(output_file, 'w', encoding='utf-8') as f:
-        for idx, pred in enumerate(preds):
-            f.write("{}\t{}\n".format(8001 + idx, relation_labels[pred]))
+        for pair_id, pred in zip(pair_ids, preds):
+            f.write("{}\t{}\n".format(pair_id, relation_labels[pred]))
 
 
 def init_logger():
@@ -48,20 +60,11 @@ def set_seed(args):
         torch.cuda.manual_seed_all(args.seed)
 
 
-def compute_metrics(preds, labels):
+def compute_metrics(preds, labels, average='macro'):
     assert len(preds) == len(labels)
-    return acc_and_f1(preds, labels)
-
-
-def simple_accuracy(preds, labels):
-    return (np.asarray(preds) == np.asarray(labels)).mean()
-
-
-def acc_and_f1(preds, labels, average='macro'):
-    acc = simple_accuracy(preds, labels)
+    acc = (np.asarray(preds) == np.asarray(labels)).mean()
 
     p, r, f1 = precision_recall_fscore_support(y_true=labels, y_pred=preds, average=average)
-    # f1 = f1_score(y_true=labels, y_pred=preds, average=average)
     return {
         "acc": acc,
         "precision": p,

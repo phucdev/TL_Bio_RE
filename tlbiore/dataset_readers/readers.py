@@ -1,4 +1,4 @@
-import json
+import csv
 import os
 import logging
 from typing import List, Dict
@@ -18,22 +18,21 @@ class PPIDatasetReader(object):
         self.args = args
         self.relation_labels = get_label(args)
 
-    @classmethod
-    def _read(cls, file_path: str):
-        with open(file_path, "r") as input_file:
+    def _read(self, file_path: str, quotechar: str = None):
+        with open(file_path, "r", encoding="utf-8") as input_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
-
+            reader = csv.reader(input_file, delimiter="\t", quotechar=quotechar)
             examples = []
-            for (i, line) in enumerate(input_file):
-                line = line.strip("\n")
-                if not line:
-                    continue
-                line_json = json.loads(line)
-                pair_id = line_json['pair_id']
-                sentence = line_json['sentence']
-                # e1_span = line_json['e1_span']
-                # e2_span = line_json['e2_span']
-                label = str(line_json['label'])
+            for (i, line) in enumerate(reader):
+                pair_id = line[0]
+                sentence = line[1]
+                if not self.args.no_lower_case:
+                    sentence = sentence.lower()
+                # e1_span = line[2]
+                # e2_span = line[3]
+                label = self.relation_labels.index(line[4])
+                if i % 1000 == 0:
+                    logger.info(line)
                 if i % 500 == 0:
                     logger.info(sentence)
                 examples.append({"pair_id": pair_id, "sentence": sentence, "label": label})
