@@ -1,6 +1,6 @@
 import argparse
 
-from tlbiore.models import *
+from tlbiore.trainers.trainers import Trainer
 from tlbiore.utils import init_logger, load_tokenizer
 from tlbiore.dataset_readers.readers import load_and_cache_examples
 
@@ -10,16 +10,16 @@ def main(args):
     tokenizer = load_tokenizer(args)
 
     train_dataset = None
-    val_dataset = None
+    dev_dataset = None
     test_dataset = None
 
     if args.do_train:
         train_dataset = load_and_cache_examples(args, tokenizer, mode="train")
-        val_dataset = load_and_cache_examples(args, tokenizer, mode="dev")
+        dev_dataset = load_and_cache_examples(args, tokenizer, mode="dev")
     if args.do_eval:
         test_dataset = load_and_cache_examples(args, tokenizer, mode="test")
 
-    trainer = Trainer(args, train_dataset=train_dataset, val_dataset=val_dataset, test_dataset=test_dataset)
+    trainer = Trainer(args, train_dataset=train_dataset, dev_dataset=dev_dataset, test_dataset=test_dataset)
 
     if args.do_train:
         trainer.train()
@@ -33,12 +33,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--task", default="semeval", type=str, help="The name of the task to train")
-    parser.add_argument("--data_dir", default="./data", type=str,
-                        help="The input data dir. Should contain the .tsv files (or other data files) for the task.")
+    parser.add_argument("--data_dir", default="../data/ppi_hu", type=str,
+                        help="The input data dir. Should contain the .jsonl files (or other data files) for the task.")
     parser.add_argument("--model_dir", default="./model", type=str, help="Path to model")
     parser.add_argument("--eval_dir", default="./eval", type=str, help="Evaluation script, result directory")
     parser.add_argument("--train_file", default="train.jsonl", type=str, help="Train file")
-    parser.add_argument("--dev_file", default="dev.jsonl", type=str, help="Train file")
+    parser.add_argument("--dev_file", default="dev.jsonl", type=str, help="Dev file")
     parser.add_argument("--test_file", default="test.jsonl", type=str, help="Test file")
     parser.add_argument("--label_file", default="label.txt", type=str, help="Label file")
 

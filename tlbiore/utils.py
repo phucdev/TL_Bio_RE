@@ -4,7 +4,7 @@ import logging
 
 import torch
 import numpy as np
-from sklearn.metrics import f1_score, precision_recall_fscore_support
+from sklearn.metrics import precision_recall_fscore_support
 from transformers.tokenization_bert import BertTokenizer
 
 ADDITIONAL_SPECIAL_TOKENS = ["#", "$"]  # TODO what about "@PROTEIN$"? Resize vocab or manually add to vocab.txt?
@@ -24,7 +24,7 @@ def write_prediction(args, output_file, preds):
     """
     For official evaluation script
     :param args:
-    :param output_file: prediction_file_path (e.g. eval/proposed_answers.txt)
+    :param output_file: prediction_file_path
     :param preds: [0,1,0,2,18,...]
     """
     relation_labels = get_label(args)
