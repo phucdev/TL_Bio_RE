@@ -24,7 +24,7 @@ def load_tokenizer(args):
 def get_predict_pair_ids(args):
     test_file = os.path.join(args.data_dir, args.test_file)
     df = pd.read_csv(test_file, delimiter='\t', header=None, names=['pair_id', 'sentence'])
-    return df.pair_id
+    return df["pair_id"]
 
 
 def write_prediction(args, output_dir, predictions):

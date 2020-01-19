@@ -18,11 +18,12 @@ logger = logging.getLogger(__name__)
 
 
 class Trainer(object):
-    def __init__(self, args, train_dataset=None, dev_dataset=None, test_dataset=None):
+    def __init__(self, args, train_dataset=None, dev_dataset=None, test_dataset=None, pred_dataset=None):
         self.args = args
         self.train_dataset = train_dataset
         self.dev_dataset = dev_dataset
         self.test_dataset = test_dataset
+        self.pred_dataset = pred_dataset
 
         self.label_lst = get_label(args)
         self.num_labels = len(self.label_lst)
@@ -170,13 +171,52 @@ class Trainer(object):
         result = compute_metrics(preds, out_label_ids)
         results.update(result)
 
-        logger.info("***** Eval results *****")
+        logger.info("***** Eval results for %s *****", mode)
         for key in sorted(results.keys()):
             logger.info("  %s = %s", key, str(results[key]))
 
-        if mode == 'test':
-            write_prediction(self.args, self.args.eval_dir, preds)
         return results
+
+    def predict(self):
+        dataset = self.pred_dataset
+        eval_sampler = SequentialSampler(dataset)
+        eval_dataloader = DataLoader(dataset, sampler=eval_sampler, batch_size=self.args.batch_size)
+
+        # Eval!
+        logger.info("***** Running on prediction dataset *****")
+        logger.info("  Num examples = %d", len(dataset))
+        logger.info("  Batch size = %d", self.args.batch_size)
+        nb_eval_steps = 0
+        preds = None
+        out_label_ids = None
+
+        self.model.eval()
+
+        for batch in tqdm(eval_dataloader, desc="Evaluating"):
+            batch = tuple(t.to(self.device) for t in batch)
+            with torch.no_grad():
+                inputs = {'input_ids': batch[0],
+                          'attention_mask': batch[1],
+                          'token_type_ids': batch[2],
+                          'labels': batch[3],
+                          'e1_mask': batch[4],
+                          'e2_mask': batch[5]}
+                outputs = self.model(**inputs)
+                _, logits = outputs[:2]
+            nb_eval_steps += 1
+
+            if preds is None:
+                preds = logits.detach().cpu().numpy()
+                out_label_ids = inputs['labels'].detach().cpu().numpy()
+            else:
+                preds = np.append(preds, logits.detach().cpu().numpy(), axis=0)
+                out_label_ids = np.append(
+                    out_label_ids, inputs['labels'].detach().cpu().numpy(), axis=0)
+
+        preds = np.argmax(preds, axis=1)
+
+        logger.info("***** Writing predictions to file *****")
+        write_prediction(self.args, self.args.eval_dir, preds)
 
     def save_model(self):
         # Save model checkpoint (Overwrite)

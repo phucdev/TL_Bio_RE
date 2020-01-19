@@ -1,4 +1,6 @@
 import csv
+import json
+import copy
 import os
 import logging
 from typing import List, Dict
@@ -83,7 +85,7 @@ class PPIDatasetReader(object):
         self.args = args
         self.relation_labels = get_label(args)
 
-    def _read(self, file_path: str, quotechar: str = None):
+    def _read(self, file_path: str, set_type: str, quotechar: str = None):
         with open(file_path, "r", encoding="utf-8") as input_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
             reader = csv.reader(input_file, delimiter="\t", quotechar=quotechar)
@@ -93,13 +95,7 @@ class PPIDatasetReader(object):
                 sentence = line[1]
                 if not self.args.no_lower_case:
                     sentence = sentence.lower()
-                try:
-                    label = self.relation_labels.index(line[2])
-                except ValueError:
-                    print("\nValueError encountered")
-                    print("label: ", line[2])
-                    print("relation labels: ", self.relation_labels)
-                    label = 0 if line[2] == 'True' else 1
+                label = 0 if set_type == "pred" else self.relation_labels.index(line[2])
                 if i % 1000 == 0:
                     logger.info(line)
                 if i % 500 == 0:
@@ -111,7 +107,7 @@ class PPIDatasetReader(object):
     def get_examples(self, mode: str):
         """
         Args:
-            mode: train, dev, test
+            mode: train, dev, test, pred
         """
         file_to_read = None
         if mode == 'train':
@@ -120,9 +116,11 @@ class PPIDatasetReader(object):
             file_to_read = self.args.dev_file
         elif mode == 'test':
             file_to_read = self.args.test_file
+        elif mode == 'pred':
+            file_to_read = self.args.pred_file
 
         logger.info("LOOKING AT {}".format(os.path.join(self.args.data_dir, file_to_read)))
-        return self._read(os.path.join(self.args.data_dir, file_to_read))
+        return self._read(file_path=os.path.join(self.args.data_dir, file_to_read), set_type=mode)
 
 
 def convert_examples_to_features(examples, max_seq_len, tokenizer,
@@ -248,8 +246,10 @@ def load_and_cache_examples(args, tokenizer, mode: str):
             examples = processor.get_examples("dev")
         elif mode == "test":
             examples = processor.get_examples("test")
+        elif mode == "pred":
+            examples = processor.get_examples("pred")
         else:
-            raise Exception("For mode, Only train, dev, test is available")
+            raise Exception("For mode, Only train, dev, test, pred is available")
 
         features = convert_examples_to_features(examples, args.max_seq_len, tokenizer,
                                                 add_sep_token=args.add_sep_token,
