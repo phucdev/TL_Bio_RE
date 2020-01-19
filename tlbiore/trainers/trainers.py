@@ -98,7 +98,7 @@ class Trainer(object):
                     global_step += 1
 
                     if self.args.logging_steps > 0 and global_step % self.args.logging_steps == 0:
-                        self.evaluate('test')
+                        self.evaluate('dev')
 
                     if self.args.save_steps > 0 and global_step % self.args.save_steps == 0:
                         self.save_model()
@@ -171,7 +171,6 @@ class Trainer(object):
             logger.info("  %s = %s", key, str(results[key]))
 
         if mode == 'test':
-            # TODO add pair id
             write_prediction(self.args, self.args.eval_dir, preds)
         return results
 
