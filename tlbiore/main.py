@@ -1,8 +1,13 @@
 import argparse
 
-from tlbiore.trainers.trainers import Trainer
-from tlbiore.utils import init_logger, load_tokenizer
-from tlbiore.dataset_readers.readers import load_and_cache_examples
+try:
+    from tlbiore.trainers.trainers import Trainer
+    from tlbiore.utils import init_logger, load_tokenizer
+    from tlbiore.dataset_readers.readers import load_and_cache_examples
+except ImportError:
+    from trainers.trainers import Trainer
+    from utils import init_logger, load_tokenizer
+    from dataset_readers.readers import load_and_cache_examples
 
 
 def main(args):

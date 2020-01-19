@@ -6,7 +6,10 @@ from typing import List, Dict
 import torch
 from torch.utils.data import TensorDataset
 
-from tlbiore.utils import get_label
+try:
+    from tlbiore.utils import get_label
+except ImportError:
+    from utils import get_label
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
