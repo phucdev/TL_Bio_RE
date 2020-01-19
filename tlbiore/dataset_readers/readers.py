@@ -14,6 +14,68 @@ except ImportError:
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
+class InputExample(object):
+    """
+    A single training/test example for simple sequence classification.
+    Args:
+        pair_id: Unique id for the example.
+        sentence: string. The untokenized text of the first sequence. For single
+        sequence tasks, only this sequence must be specified.
+        label: (Optional) string. The label of the example. This should be
+        specified for train and dev examples, but not for test examples.
+    """
+
+    def __init__(self, pair_id, sentence, label):
+        self.pair_id = pair_id
+        self.sentence = sentence
+        self.label = label
+
+    def __repr__(self):
+        return str(self.to_json_string())
+
+    def to_dict(self):
+        """Serializes this instance to a Python dictionary."""
+        output = copy.deepcopy(self.__dict__)
+        return output
+
+    def to_json_string(self):
+        """Serializes this instance to a JSON string."""
+        return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
+
+
+class InputFeatures(object):
+    """
+    A single set of features of data.
+    Args:
+        input_ids: Indices of input sequence tokens in the vocabulary.
+        attention_mask: Mask to avoid performing attention on padding token indices.
+            Mask values selected in ``[0, 1]``:
+            Usually  ``1`` for tokens that are NOT MASKED, ``0`` for MASKED (padded) tokens.
+        token_type_ids: Segment token indices to indicate first and second portions of the inputs.
+    """
+
+    def __init__(self, input_ids, attention_mask, token_type_ids, label_id,
+                 e1_mask, e2_mask):
+        self.input_ids = input_ids
+        self.attention_mask = attention_mask
+        self.token_type_ids = token_type_ids
+        self.label_id = label_id
+        self.e1_mask = e1_mask
+        self.e2_mask = e2_mask
+
+    def __repr__(self):
+        return str(self.to_json_string())
+
+    def to_dict(self):
+        """Serializes this instance to a Python dictionary."""
+        output = copy.deepcopy(self.__dict__)
+        return output
+
+    def to_json_string(self):
+        """Serializes this instance to a JSON string."""
+        return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
+
+
 class PPIDatasetReader(object):
     """Processor for the PPI data set"""
 
@@ -31,12 +93,19 @@ class PPIDatasetReader(object):
                 sentence = line[1]
                 if not self.args.no_lower_case:
                     sentence = sentence.lower()
-                label = self.relation_labels.index(line[2])
+                try:
+                    label = self.relation_labels.index(line[2])
+                except ValueError:
+                    print("\nValueError encountered")
+                    print("label: ", line[2])
+                    print("relation labels: ", self.relation_labels)
+                    label = 0 if line[2] == 'True' else 1
                 if i % 1000 == 0:
                     logger.info(line)
                 if i % 500 == 0:
                     logger.info(sentence)
-                examples.append({"pair_id": pair_id, "sentence": sentence, "label": label})
+                examples.append(InputExample(pair_id=pair_id, sentence=sentence,
+                                             label=label))
             return examples
 
     def get_examples(self, mode: str):
@@ -56,7 +125,7 @@ class PPIDatasetReader(object):
         return self._read(os.path.join(self.args.data_dir, file_to_read))
 
 
-def convert_examples_to_features(examples: List[Dict], max_seq_len, tokenizer,
+def convert_examples_to_features(examples, max_seq_len, tokenizer,
                                  cls_token='[CLS]',
                                  cls_token_segment_id=0,
                                  sep_token='[SEP]',
@@ -71,27 +140,24 @@ def convert_examples_to_features(examples: List[Dict], max_seq_len, tokenizer,
         if ex_index % 1000 == 0:
             logger.info("Writing example %d of %d" % (ex_index, len(examples)))
 
-        tokens = tokenizer.tokenize(example['sentence'])
+        tokens = tokenizer.tokenize(example.sentence)
 
-        e1_marker_pairs = None
-        e2_marker_pairs = None
-        if use_positional_markers:
-            e1_marker_indices = []
-            e2_marker_indices = []
+        e1_marker_indices = []
+        e2_marker_indices = []
 
-            for idx, token in enumerate(tokens):
-                if token == "$":
-                    e1_marker_indices.append(idx + 1)  # account for CLS token, that will be added later on
-                elif token == "#":
-                    e2_marker_indices.append(idx + 1)  # account for CLS token, that will be added later on
+        for idx, token in enumerate(tokens):
+            if token == "$":
+                e1_marker_indices.append(idx + 1)  # account for CLS token, that will be added later on
+            elif token == "#":
+                e2_marker_indices.append(idx + 1)  # account for CLS token, that will be added later on
 
-            # Make sure that we have both the start and end markers
-            assert len(e1_marker_indices) % 2 == 0, "Error with missing markers $ for e1: {}".format(tokens)
-            assert len(e2_marker_indices) % 2 == 0, "Error with missing markers # for e2: {}".format(tokens)
+        # Make sure that we have both the start and end markers
+        assert len(e1_marker_indices) % 2 == 0, "Error with missing markers $ for e1: {}".format(tokens)
+        assert len(e2_marker_indices) % 2 == 0, "Error with missing markers # for e2: {}".format(tokens)
 
-            # Collect indices of all the entity parts
-            e1_marker_pairs = zip(e1_marker_indices[::2], e1_marker_indices[1::2])
-            e2_marker_pairs = zip(e2_marker_indices[::2], e2_marker_indices[1::2])
+        # Collect indices of all the entity parts
+        e1_marker_pairs = zip(e1_marker_indices[::2], e1_marker_indices[1::2])
+        e2_marker_pairs = zip(e2_marker_indices[::2], e2_marker_indices[1::2])
 
         # Account for [CLS] and [SEP] with "- 2".
         if add_sep_token:
@@ -146,25 +212,22 @@ def convert_examples_to_features(examples: List[Dict], max_seq_len, tokenizer,
 
         if ex_index < 5:
             logger.info("*** Example ***")
-            logger.info("pair_id: %s" % example['pair_id'])
+            logger.info("pair_id: %s" % example.pair_id)
             logger.info("tokens: %s" % " ".join([str(x) for x in tokens]))
             logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
             logger.info("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
             logger.info("token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
             logger.info("label: %s (id = %d)" % (example.label, label_id))
-            if use_positional_markers:
-                logger.info("e1_mask: %s" % " ".join([str(x) for x in e1_mask]))
-                logger.info("e2_mask: %s" % " ".join([str(x) for x in e2_mask]))
+            logger.info("e1_mask: %s" % " ".join([str(x) for x in e1_mask]))
+            logger.info("e2_mask: %s" % " ".join([str(x) for x in e2_mask]))
 
-        example_features = {"input_ids": input_ids,
-                            "attention_mask": attention_mask,
-                            "token_type_ids": token_type_ids,
-                            "label_id": label_id}
-        if use_positional_markers:
-            example_features["e1_mask"] = e1_mask
-            example_features["e2_mask"] = e2_mask
-
-        features.append(example_features)
+        features.append(
+            InputFeatures(input_ids=input_ids,
+                          attention_mask=attention_mask,
+                          token_type_ids=token_type_ids,
+                          label_id=label_id,
+                          e1_mask=e1_mask,
+                          e2_mask=e2_mask))
 
     return features
 
@@ -195,18 +258,14 @@ def load_and_cache_examples(args, tokenizer, mode: str):
         torch.save(features, cached_features_file)
 
     # Convert to Tensors and build dataset
-    all_input_ids = torch.tensor([f["input_ids"] for f in features], dtype=torch.long)
-    all_attention_mask = torch.tensor([f["attention_mask"] for f in features], dtype=torch.long)
-    all_token_type_ids = torch.tensor([f["token_type_ids"] for f in features], dtype=torch.long)
-    all_label_ids = torch.tensor([f["label_id"] for f in features], dtype=torch.long)
+    all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
+    all_attention_mask = torch.tensor([f.attention_mask for f in features], dtype=torch.long)
+    all_token_type_ids = torch.tensor([f.token_type_ids for f in features], dtype=torch.long)
+    all_e1_mask = torch.tensor([f.e1_mask for f in features], dtype=torch.long)  # add e1 mask
+    all_e2_mask = torch.tensor([f.e2_mask for f in features], dtype=torch.long)  # add e2 mask
 
-    if args.use_positional_markers:
-        all_e1_mask = torch.tensor([f["e1_mask"] for f in features], dtype=torch.long)  # add e1 mask
-        all_e2_mask = torch.tensor([f["e2_mask"] for f in features], dtype=torch.long)  # add e2 mask
-        dataset = TensorDataset(all_input_ids, all_attention_mask,
-                                all_token_type_ids, all_label_ids, all_e1_mask, all_e2_mask)
-    else:
-        dataset = TensorDataset(all_input_ids, all_attention_mask,
-                                all_token_type_ids, all_label_ids)
+    all_label_ids = torch.tensor([f.label_id for f in features], dtype=torch.long)
 
+    dataset = TensorDataset(all_input_ids, all_attention_mask,
+                            all_token_type_ids, all_label_ids, all_e1_mask, all_e2_mask)
     return dataset
