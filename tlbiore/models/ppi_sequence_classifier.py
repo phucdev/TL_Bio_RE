@@ -1,102 +1,179 @@
+from collections import OrderedDict
+
 import torch
 from torch import nn
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 import torch.nn.functional as f
 import pytorch_lightning as pl
-from keras.preprocessing.sequence import pad_sequences
-from transformers import BertTokenizer, BertModel
+from transformers import BertTokenizer, BertModel, BertForSequenceClassification, get_linear_schedule_with_warmup
 from transformers import AdamW
 import pandas as pd
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from tlbiore.models import utils
-
-MAX_LEN = 512  # Number used in original paper was 512, however we have some sequences that have length > 800 and 512
-# seems to take up too much memory
-BATCH_SIZE = 8  # Dito
-EPOCHS = 4  # Number of training epochs (authors recommend between 2 and 4)
-BIO_BERT = '../models/biobert_v1.1._pubmed'
-# SCI_BERT = '/content/drive/My Drive/TransferLearning/biobert_v1.1._pubmed'
-LIN_DIRECTORY = '../data/lin'
-LEE_DIRECTORY = '../data/lee'
-ALI_DIRECTORY = '../data/ali'
-E1_MARKER_ID = 1002     # "$" is 1002, "#" is 1001
-E2_MARKER_ID = 1001
-ARGS = utils.Arguments(BIO_BERT, MAX_LEN, BATCH_SIZE)
+from tlbiore.dataset_readers import readers
 
 
-def preprocess(tokenizer: BertTokenizer, x: pd.DataFrame, max_length):
-    sentences = x.sentence.values
+class BertSequenceClassifier(pl.LightningModule):
 
-    # TODO get position of entities & positional markers in input_ids
-    # TODO handle case where sequence is longer than 512, e.g. use 512 window on relevant parts?
-    # Tokenize input
-    input_ids = [tokenizer.encode(sent, add_special_tokens=True, max_length=max_length) for sent in sentences]
-    # Pad our input tokens
-    input_ids = pad_sequences(input_ids, maxlen=max_length, dtype="long", truncating="post", padding="post")
-    # Create attention masks
-    attention_masks = []
+    def __init__(self, args, train_dataset=None, dev_dataset=None, test_dataset=None):
+        super(BertSequenceClassifier, self).__init__()
+        self.args = args
+        self.batch_size = args.batch_size
+        self.train_dataset = train_dataset
+        self.dev_dataset = dev_dataset
+        self.test_dataset = test_dataset
 
-    # Create a mask of 1s for each token followed by 0s for padding
-    for seq in input_ids:
-        seq_mask = [float(i > 0) for i in seq]
-        attention_masks.append(seq_mask)
-
-    # Convert all of our data into torch tensors, the required data type for our model
-    input_ids = torch.tensor(input_ids)
-    labels = torch.tensor(x.label.values)
-    attention_masks = torch.tensor(attention_masks)
-
-    return input_ids, attention_masks, labels
-
-
-def get_dataloader(data_directory, args: utils.Arguments):
-    train_data = utils.read_tsv(data_directory+"/train.tsv")
-    dev_data = utils.read_tsv(data_directory + "/dev.tsv")
-    test_data = utils.read_tsv(data_directory + "/test.tsv")
-
-    # Import BERT tokenizer
-    tokenizer = BertTokenizer.from_pretrained(args.bert, do_lower_case=True)
-    # special_tokens_dict = {'additional_special_tokens': ['@PROTEIN1$', '@PROTEIN2$', 'ps', 'pe']}
-    # num_added_tokens = tokenizer.add_special_tokens(special_tokens_dict)
-    # print('Added {} tokens'.format(num_added_tokens))
-
-    # Create an iterator of our data with torch DataLoader. This helps save on memory during training because,
-    # unlike a for loop, with an iterator the entire data set does not need to be loaded into memory
-
-    train_data = TensorDataset(*preprocess(tokenizer, train_data, args.max_length))
-    train_dataloader = DataLoader(train_data, sampler=RandomSampler(train_data), batch_size=args.batch_size)
-
-    dev_data = TensorDataset(*preprocess(tokenizer, dev_data, args.max_length))
-    dev_dataloader = DataLoader(dev_data, sampler=SequentialSampler(dev_data), batch_size=args.batch_size)
-
-    test_data = TensorDataset(*preprocess(tokenizer, test_data, args.max_length))
-    test_dataloader = DataLoader(test_data, sampler=SequentialSampler(test_data), batch_size=args.batch_size)
-
-    return train_dataloader, dev_dataloader, test_dataloader
-
-
-class BertBiomedicalRE(pl.LightningModule):
-
-    def __init__(self):
-        super(BertBiomedicalRE, self).__init__()
         self.num_labels = 2
-        # TODO: see
-        #  https://github.com/huggingface/transformers/blob/594ca6deadb6bb79451c3093641e3c9e5dcfa446/src/transformers/modeling_bert.py#L1099
-        #  https://medium.com/swlh/painless-fine-tuning-of-bert-in-pytorch-b91c14912caa?
-        #  to add layers for ALI method
+        self.model = BertForSequenceClassification.from_pretrained(args.pretrained_model_name,
+                                                                   num_labels=self.num_labels)
 
-        # use pretrained BERT
-        self.bert = BertModel.from_pretrained(BIO_BERT, output_attentions=True)
+    def configure_optimizers(self):
+        param_optimizer = list(self.model.named_parameters())
+        no_decay = ["bias", "gamma", "beta"]
+        optimizer_grouped_parameters = [
+            {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
+             'weight_decay_rate': self.args.weight_decay},
+            {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)],
+             'weight_decay_rate': 0.0}
+        ]
 
-        # fine tuner (2 classes)
-        self.dropout = nn.Dropout(self.bert.config.hidden_dropout_prob)
-        # TODO: add additional layers here
-        self.classifier = nn.Linear(in_features=self.bert.config.hidden_size, out_features=self.num_labels)
+        optimizer = AdamW(optimizer_grouped_parameters, lr=self.args.learning_rate, eps=self.args.adam_epsilon)
+        scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=self.args.warmup_steps,
+                                                    num_training_steps=t_total)
 
-        train_dataloader, val_dataloader, test_dataloader = get_dataloader(LIN_DIRECTORY, ARGS)
-        self._train_dataloader = train_dataloader
-        self._val_dataloader = val_dataloader
-        self._test_dataloader = test_dataloader
+        return optimizer
+
+    def forward(self, *args, **kwargs):
+        """We don't really need this function"""
+        pass
+
+    def training_step(self, batch, batch_nb):
+        labels = batch["label"]
+        input_ids = batch["input_ids"]
+        attention_mask = batch["attention_mask"]
+        token_type_ids = batch["token_type_ids"]
+
+        loss, _ = self.model(
+            input_ids,
+            token_type_ids=token_type_ids,
+            attention_mask=attention_mask,
+            labels=labels
+        )
+
+        tqdm_dict = {"train_loss": loss}
+        output = OrderedDict({
+            "loss": loss,
+            "progress_bar": tqdm_dict,
+            "log": tqdm_dict
+        })
+
+        return output
+
+    def validation_step(self, batch, batch_nb):
+        labels = batch["label"]
+        input_ids = batch["input_ids"]
+        attention_mask = batch["attention_mask"]
+        token_type_ids = batch["token_type_ids"]
+
+        loss, logits = self.model(
+            input_ids,
+            token_type_ids=token_type_ids,
+            attention_mask=attention_mask,
+            labels=labels
+        )
+        labels_hat = torch.argmax(logits, dim=1)
+
+        correct_count = torch.sum(labels == labels_hat)
+
+        if self.on_gpu:
+            correct_count = correct_count.cuda(loss.device.index)
+
+        output = OrderedDict({
+            "val_loss": loss,
+            "correct_count": correct_count,
+            "batch_size": len(labels)
+        })
+        return output
+
+    def validation_end(self, outputs):
+        val_acc = sum([out["correct_count"] for out in outputs]).float() / sum(out["batch_size"] for out in outputs)
+        val_loss = sum([out["val_loss"] for out in outputs]) / len(outputs)
+        tqdm_dict = {
+            "val_loss": val_loss,
+            "val_acc": val_acc,
+        }
+        result = {"progress_bar": tqdm_dict, "log": tqdm_dict, "val_loss": val_loss}
+        return result
+
+    def test_step(self, batch, batch_nb):
+        labels = batch["label"]
+        input_ids = batch["input_ids"]
+        attention_mask = batch["attention_mask"]
+        token_type_ids = batch["token_type_ids"]
+
+        loss, logits = self.model(
+            input_ids,
+            token_type_ids=token_type_ids,
+            attention_mask=attention_mask,
+            labels=labels
+        )
+        labels_hat = torch.argmax(logits, dim=1)
+
+        correct_count = torch.sum(labels == labels_hat)
+
+        if self.on_gpu:
+            correct_count = correct_count.cuda(loss.device.index)
+
+        output = OrderedDict({
+            "test_loss": loss,
+            "correct_count": correct_count,
+            "batch_size": len(labels)
+        })
+
+        return output
+
+    def test_end(self, outputs):
+        test_acc = sum([out["correct_count"] for out in outputs]).float() / sum(out["batch_size"] for out in outputs)
+        test_loss = sum([out["test_loss"] for out in outputs]) / len(outputs)
+        tqdm_dict = {
+            "test_loss": test_loss,
+            "test_acc": test_acc,
+        }
+        result = {"progress_bar": tqdm_dict, "log": tqdm_dict}
+        return result
+
+    @pl.data_loader
+    def train_dataloader(self):
+        train_sampler = RandomSampler(self.train_dataset)
+        train_dataloader = DataLoader(self.train_dataset, sampler=train_sampler, batch_size=self.batch_size)
+        return train_dataloader
+
+    @pl.data_loader
+    def tng_dataloader(self):
+        # supposedly deprecated, but PyCharm seems to require this implementation
+        train_sampler = RandomSampler(self.train_dataset)
+        train_dataloader = DataLoader(self.train_dataset, sampler=train_sampler, batch_size=self.batch_size)
+        return train_dataloader
+
+    @pl.data_loader
+    def val_dataloader(self):
+        val_sampler = SequentialSampler(self.train_dataset)
+        val_dataloader = DataLoader(self.train_dataset, sampler=val_sampler, batch_size=self.batch_size)
+        return val_dataloader
+
+    @pl.data_loader
+    def test_dataloader(self):
+        test_sampler = SequentialSampler(self.train_dataset)
+        test_dataloader = DataLoader(self.train_dataset, sampler=test_sampler, batch_size=self.batch_size)
+        return test_dataloader
+
+
+class RBert(pl.LightningModule):
+
+    def __init__(self, args):
+        super(RBert, self).__init__()
+        self.num_labels = 2
+        self.bert = BertModel.from_pretrained(args.pretrained_model_name, output_attention=True)
 
     def configure_optimizers(self):
         param_optimizer = list(self.bert.named_parameters())
