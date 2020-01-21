@@ -44,17 +44,18 @@ local bert_model = "models/biobert_v1.1._pubmed/";
     },
     "trainer": {
         "optimizer": {
-            "type": "adam",
-            "lr": 0.001
+            "type": "huggingface_adamw",
+            "lr": 0.00002,
+            "eps": 0.00000001
         },
         "validation_metric": "+average_F1",
         "num_serialized_models_to_keep": 1,
-        "num_epochs": std.parseInt(std.extVar("NUM_EPOCHS")),
+        "num_epochs": 5,
         "should_log_learning_rate": true,
         "learning_rate_scheduler": {
           "type": "linear_schedule_with_warmup",
-          "num_warmup_steps": 5,
-          "num_training_steps":
+          "num_warmup_steps": 0,
+          "num_training_steps": 10304
         },
         "cuda_device": 0
     }
