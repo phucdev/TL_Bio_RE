@@ -6,9 +6,10 @@
      "type": "ppi_dataset_reader",
      "token_indexers": {
         "bert": {
-            "type": "bert-pretrained",
+            "type": "bert-pretrained-special",
             "pretrained_model": std.extVar("BERT_VOCAB"),
             "do_lowercase": std.extVar("IS_LOWERCASE"),
+            "max_pieces": std.extVar("MAX_SEQ_LEN"),
             "use_starting_offsets": true
         }
     }

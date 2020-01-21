@@ -1,14 +1,14 @@
 import json
 import logging
-from typing import Dict
+from typing import Dict, Any, List, Callable
 
 from allennlp.common.file_utils import cached_path
+from allennlp.data import Token
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, LabelField, MetadataField
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from overrides import overrides
+from tlbiore.token_indexers.token_indexers import PretrainedBertSpecialIndexer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -31,22 +31,21 @@ class PPIDatasetReader(DatasetReader):
         Passed to ``DatasetReader``.  If this is ``True``, training will start sooner, but will
         take longer per batch.  This also allows training with datasets that are too large to fit
         in memory.
-    tokenizer : ``Tokenizer``, optional
-        Tokenizer to use to split the sentence into tokens.
-        Defaults to ``WordTokenizer()``.
-    token_indexers : ``Dict[str, TokenIndexer]``, optional
-        Indexers used to define input token representations. Defaults to ``{"tokens":
-        SingleIdTokenIndexer()}``.
+    token_indexers : ``Dict[str, PretrainedBertSpecialIndexer]`` (optional, default indexer with bert-base-cased)
+        Indexers used to define input token representations.
     """
 
     def __init__(self,
                  lazy: bool = False,
-                 tokenizer: Tokenizer = None,
-                 token_indexers: Dict[str, TokenIndexer] = None
+                 token_indexers: Dict[str, PretrainedBertSpecialIndexer] = None,
                  ) -> None:
         super().__init__(lazy)
-        self._tokenizer = tokenizer or WordTokenizer()
-        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
+        self._token_indexers = token_indexers or {"bert": PretrainedBertSpecialIndexer(
+            pretrained_model='bert-base-cased',
+            do_lowercase=False
+        )}
+        assert "bert" in self._token_indexers
+        self._tokenizer: Callable[[str], List[str]] = self._token_indexers["bert"].wordpiece_tokenizer
 
     @overrides
     def _read(self, file_path: str):
@@ -61,29 +60,25 @@ class PPIDatasetReader(DatasetReader):
                 line_json = json.loads(line)
                 pair_id = line_json['pair_id']
                 sentence = line_json['sentence']
-                e1_span = line_json['e1_span']
-                e2_span = line_json['e2_span']
                 label = str(line_json['label'])
-                yield self.text_to_instance(sentence, label, pair_id, e1_span, e2_span)
+                yield self.text_to_instance(
+                    sentence=sentence,
+                    label=label,
+                    metadata={'pair_id': pair_id}
+                )
 
     @overrides
     def text_to_instance(self,
                          sentence: str,
                          label: str = None,
-                         pair_id: str = None,
-                         e1_span=None,
-                         e2_span=None) -> Instance:  # type: ignore
-        sentence_tokens = self._tokenizer.tokenize(sentence)  # TODO: check compatibility with BioBERT
+                         metadata: Dict[str, Any] = None) -> Instance:  # type: ignore
+        sentence_tokens = [Token(x) for x in self._tokenizer(sentence)]
         fields = {
             'text': TextField(sentence_tokens, self._token_indexers),
         }
         if label is not None:
             fields['label'] = LabelField(label)
 
-        """if pair_id is not None:
-            fields['pair_id'] = MetadataField(pair_id)
-        if e1_span is not None:
-            fields['e1_span'] = MetadataField(e1_span)
-        if e2_span is not None:
-            fields['e2_span'] = MetadataField(e2_span)"""
+        if metadata is not None:
+            fields['metadata'] = MetadataField(metadata)
         return Instance(fields)

@@ -23,6 +23,7 @@ export PYTORCH_SEED=$PYTORCH_SEED
 export NUMPY_SEED=$NUMPY_SEED
 
 export IS_LOWERCASE=false
+export MAX_SEQ_LEN=286
 export TRAIN_PATH=data/$DATASET/train.jsonl
 export DEV_PATH=data/$DATASET/dev.jsonl
 export TEST_PATH=data/$DATASET/test.jsonl

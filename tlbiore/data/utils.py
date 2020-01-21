@@ -174,12 +174,14 @@ def get_deep_copy(obj):
 
 
 def export_tsv(df: pd.DataFrame, out, with_label=True):
-    data = df.drop('label', 1) if 'label' in df.columns and not with_label else df
+    data = df.drop(['e1_span', 'e2_span'], axis=1)
+    if 'label' in data.columns and not with_label:
+        data = data.drop('label', axis=1)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     data.to_csv(out, sep='\t', index=False, header=False)
 
 
 def export_jsonl(df: pd.DataFrame, out, with_label=True):
-    data = df.drop('label', 1) if 'label' in df.columns and not with_label else df
+    data = df.drop('label', axis=1) if 'label' in df.columns and not with_label else df
     os.makedirs(os.path.dirname(out), exist_ok=True)
     data.to_json(out, orient='records', lines=True)

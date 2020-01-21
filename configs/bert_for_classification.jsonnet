@@ -16,17 +16,21 @@ local bert_model = "models/biobert_v1.1._pubmed/";
 {
     "dataset_reader": {
         "lazy": false,
-        "type": "new_ppi_dataset_reader",
+        "type": "ppi_dataset_reader",
         "token_indexers": {
             "bert": {
-                "type": "bert-pretrained",
-                "pretrained_model": bert_model
+                "type": "bert-pretrained-special",
+                "pretrained_model": bert_model,
+                "do_lowercase": False,
+                "max_pieces": 286,
+                "use_starting_offsets": true,
+                "additional_special_tokens": ["$","#"]
             }
         }
     },
-    "train_data_path": "data/sentencewise/lin/train.jsonl",
-    "validation_data_path": "data/sentencewise/lin/dev.jsonl",
-    "test_data_path": "data/sentencewise/lin/test.jsonl",
+    "train_data_path": "data/ppi_hu/lin/train.jsonl",
+    "validation_data_path": "data/ppi_hu/lin/dev.jsonl",
+    "test_data_path": "data/ppi_hu/lin/test.jsonl",
     "evaluate_on_test": true,
     "model": {
         "type": "bert_for_classification",
@@ -36,18 +40,22 @@ local bert_model = "models/biobert_v1.1._pubmed/";
     "iterator": {
         "type": "bucket",
         "sorting_keys": [["tokens", "num_tokens"]],
-        "batch_size": 5
+        "batch_size": 32
     },
     "trainer": {
         "optimizer": {
             "type": "adam",
             "lr": 0.001
         },
-        "validation_metric": "+accuracy",
+        "validation_metric": "+average_F1",
         "num_serialized_models_to_keep": 1,
-        "num_epochs": 4,
-        "grad_norm": 10.0,
-        "patience": 5,
+        "num_epochs": std.parseInt(std.extVar("NUM_EPOCHS")),
+        "should_log_learning_rate": true,
+        "learning_rate_scheduler": {
+          "type": "linear_schedule_with_warmup",
+          "num_warmup_steps": 5,
+          "num_training_steps":
+        },
         "cuda_device": 0
     }
 }

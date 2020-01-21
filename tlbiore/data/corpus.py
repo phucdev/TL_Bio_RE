@@ -46,7 +46,7 @@ class Pair:
         self.e1: Entity = pair_attrib['e1']
         self.e2: Entity = pair_attrib['e2']
         if 'interaction' in pair_attrib.keys():
-            self.label = 1 if pair_attrib['interaction'] == 'True' else 0
+            self.label = pair_attrib['interaction']
         else:
             self.label = None
 
@@ -97,7 +97,6 @@ class Sentence:
                                    'e1_span': e1_span, 'e2_span': e2_span})
         if len(label) == len(sentence) and None not in label:
             example_df['label'] = label
-            example_df = example_df.astype({'label': int})
         return example_df
 
 
