@@ -1,16 +1,13 @@
-from typing import List
+from typing import List, Dict
 import logging
 
+from allennlp.data import TokenType
 from transformers.tokenization_bert import BertTokenizer
 
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.token_indexers.wordpiece_indexer import WordpieceIndexer
 
 logger = logging.getLogger(__name__)
-
-
-# This is the default list of tokens that should not be lowercased.
-_NEVER_LOWERCASE = ["[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]"]
 
 
 @TokenIndexer.register("bert-pretrained-special")
@@ -93,3 +90,8 @@ class PretrainedBertSpecialIndexer(WordpieceIndexer):
                     return False
             return True
         return NotImplemented
+
+    def pad_token_sequence(self, tokens: Dict[str, List[TokenType]], desired_num_tokens: Dict[str, int],
+                           padding_lengths: Dict[str, int]) -> Dict[str, TokenType]:
+        # deprecated, but PyCharm displays a warning
+        pass

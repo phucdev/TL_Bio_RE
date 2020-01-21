@@ -8,6 +8,7 @@ from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import L
 
 @LearningRateScheduler.register("linear_schedule_with_warmup")
 class LinearScheduleWithWarmup(LearningRateScheduler):
+    # noinspection PyUnresolvedReferences
     def __init__(
         self,
         optimizer: torch.optim.Optimizer,
@@ -17,6 +18,9 @@ class LinearScheduleWithWarmup(LearningRateScheduler):
         self.lr_scheduler = get_linear_schedule_with_warmup(optimizer=optimizer, num_warmup_steps=num_warmup_steps,
                                                             num_training_steps=num_training_steps)
         super().__init__(optimizer)
+
+    def get_values(self) -> None:
+        return self.lr_scheduler.get_lr()
 
     @overrides
     def step(self, metric: float = None, epoch: int = None) -> None:
