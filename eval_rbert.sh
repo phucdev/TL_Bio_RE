@@ -19,4 +19,4 @@ CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 python3 /vol/fob-vol6/nebenf
   --batch_size=16 \
   --num_train_epochs=5 \
   --no_lower_case \
-  --label_file=/vol/fob-vol6/nebenf13/truongph/Data/ppi_TL_HU/labels.txt
+  --label_file=/vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/data/ppi_hu/labels.txt

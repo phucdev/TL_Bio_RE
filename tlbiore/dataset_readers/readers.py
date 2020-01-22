@@ -58,10 +58,8 @@ class InputFeatures(object):
         self.attention_mask = attention_mask
         self.token_type_ids = token_type_ids
         self.label_id = label_id
-        if not e1_mask:
-            self.e1_mask = e1_mask
-        if not e2_mask:
-            self.e2_mask = e2_mask
+        self.e1_mask = e1_mask
+        self.e2_mask = e2_mask
 
     def __repr__(self):
         return str(self.to_json_string())
