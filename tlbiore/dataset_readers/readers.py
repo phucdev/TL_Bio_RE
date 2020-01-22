@@ -150,8 +150,10 @@ def convert_examples_to_features(examples, max_seq_len, tokenizer,
                     e2_marker_indices.append(idx + 1)  # account for CLS token, that will be added later on
 
             # Make sure that we have both the start and end markers
-            assert len(e1_marker_indices) % 2 == 0, "Error with missing markers $ for e1: {}".format(tokens)
-            assert len(e2_marker_indices) % 2 == 0, "Error with missing markers # for e2: {}".format(tokens)
+            if len(e1_marker_indices) % 2 == 0:
+                raise Exception("Error with missing markers $ for e1: {}".format(tokens))
+            if len(e2_marker_indices) % 2 == 0:
+                raise Exception("Error with missing markers # for e2: {}".format(tokens))
 
             # Collect indices of all the entity parts
             e1_marker_pairs = zip(e1_marker_indices[::2], e1_marker_indices[1::2])
@@ -239,6 +241,7 @@ def convert_examples_to_features(examples, max_seq_len, tokenizer,
 
 
 def load_and_cache_examples(args, tokenizer, mode: str):
+    use_positional_markers = True if args.model == 'rbert' else False
     processor = PPIDatasetReader(args)  # or make it variable
 
     # Load data features from cache or dataset file
@@ -261,7 +264,7 @@ def load_and_cache_examples(args, tokenizer, mode: str):
 
         features = convert_examples_to_features(examples, args.max_seq_len, tokenizer,
                                                 add_sep_token=args.add_sep_token,
-                                                use_positional_markers=args.use_positional_markers)
+                                                use_positional_markers=use_positional_markers)
         logger.info("Saving features into cached file %s", cached_features_file)
         torch.save(features, cached_features_file)
 
@@ -271,13 +274,13 @@ def load_and_cache_examples(args, tokenizer, mode: str):
     all_token_type_ids = torch.tensor([f.token_type_ids for f in features], dtype=torch.long)
     all_e1_mask = None
     all_e2_mask = None
-    if args.use_positional_markers:
+    if use_positional_markers:
         all_e1_mask = torch.tensor([f.e1_mask for f in features], dtype=torch.long)  # add e1 mask
         all_e2_mask = torch.tensor([f.e2_mask for f in features], dtype=torch.long)  # add e2 mask
 
     all_label_ids = torch.tensor([f.label_id for f in features], dtype=torch.long)
 
-    if args.use_positional_markers:
+    if use_positional_markers:
         dataset = TensorDataset(all_input_ids, all_attention_mask,
                                 all_token_type_ids, all_label_ids, all_e1_mask, all_e2_mask)
     else:

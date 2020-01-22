@@ -8,7 +8,6 @@ MODEL_NAME=biobert_ali
 export PYTHONPATH=$PWD
 
 CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 python3 /vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/tlbiore/main.py \
-  --do_train \
   --do_eval \
   --task=ppi \
   --data_dir=/vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/data/ppi_hu/$METHOD \

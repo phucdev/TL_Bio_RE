@@ -7,6 +7,7 @@ from tlbiore.dataset_readers.readers import load_and_cache_examples
 
 def main(args):
     init_logger()
+
     tokenizer = load_tokenizer(args)
 
     train_dataset = None
@@ -73,8 +74,6 @@ if __name__ == '__main__':
                         help="If > 0: set total number of training steps to perform. Override num_train_epochs.")
     parser.add_argument("--warmup_steps", default=0, type=int, help="Linear warmup over warmup_steps.")
     parser.add_argument("--dropout_rate", default=0.1, type=float, help="Dropout for fully-connected layers")
-    parser.add_argument("--use_positional_markers", default=False, type=bool,
-                        help="Whether to look for positional markers and use entity representation.")
 
     parser.add_argument('--logging_steps', type=int, default=250, help="Log every X updates steps.")
     parser.add_argument('--save_steps', type=int, default=250, help="Save checkpoint every X updates steps.")

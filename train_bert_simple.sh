@@ -2,9 +2,9 @@ BERT=bert-base-cased
 BIOBERT=/vol/fob-vol6/nebenf13/truongph/Models/biobert_v1.1._pubmed_pytorch
 SCIBERT=/vol/fob-vol6/nebenf13/truongph/Models/scibert_scivocab_cased_pytorch
 
-METHOD=ali
+METHOD=lee
 PRETRAINED=$BIOBERT
-MODEL_NAME=biobert_ali
+MODEL_NAME=biobert_lee
 export PYTHONPATH=$PWD
 
 CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 python3 /vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/tlbiore/main.py \
@@ -17,5 +17,6 @@ CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 python3 /vol/fob-vol6/nebenf
   --max_seq_len=286 \
   --batch_size=16 \
   --num_train_epochs=5 \
+  --model=simple \
   --no_lower_case \
   --label_file=/vol/fob-vol6/nebenf13/truongph/Data/ppi_TL_HU/labels.txt

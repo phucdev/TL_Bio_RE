@@ -32,6 +32,7 @@ class Trainer(object):
         self.bert_config = BertConfig.from_pretrained(args.pretrained_model_name, num_labels=self.num_labels,
                                                       finetuning_task=args.task)
         self.model = models[args.model](self.bert_config, args)
+        self.use_positional_markers = True if args.model == 'rbert' else False
 
         # GPU or CPU
         self.device = torch.device('cuda:0}') if torch.cuda.is_available() and not args.no_cuda else "cpu"
@@ -80,7 +81,7 @@ class Trainer(object):
             for step, batch in enumerate(epoch_iterator):
                 self.model.train()
                 batch = tuple(t.to(self.device) for t in batch)  # GPU or CPU
-                if self.args.use_positional_markers or self.args.model == "simple":
+                if self.use_positional_markers or self.args.model == "rbert":
                     inputs = {'input_ids': batch[0],
                               'attention_mask': batch[1],
                               'token_type_ids': batch[2],
@@ -150,7 +151,7 @@ class Trainer(object):
         for batch in tqdm(eval_dataloader, desc="Evaluating"):
             batch = tuple(t.to(self.device) for t in batch)
             with torch.no_grad():
-                if self.args.use_positional_markers or self.args.model == "simple":
+                if self.use_positional_markers or self.args.model == "rbert":
                     inputs = {'input_ids': batch[0],
                               'attention_mask': batch[1],
                               'token_type_ids': batch[2],
@@ -208,7 +209,7 @@ class Trainer(object):
         for batch in tqdm(eval_dataloader, desc="Predicting"):
             batch = tuple(t.to(self.device) for t in batch)
             with torch.no_grad():
-                if self.args.use_positional_markers or self.args.model == "simple":
+                if self.use_positional_markers or self.args.model == "rbert":
                     inputs = {'input_ids': batch[0],
                               'attention_mask': batch[1],
                               'token_type_ids': batch[2],
