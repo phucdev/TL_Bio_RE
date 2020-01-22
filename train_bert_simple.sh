@@ -2,9 +2,9 @@ BERT=bert-base-cased
 BIOBERT=/vol/fob-vol6/nebenf13/truongph/Models/biobert_v1.1._pubmed_pytorch
 SCIBERT=/vol/fob-vol6/nebenf13/truongph/Models/scibert_scivocab_cased_pytorch
 
-METHOD=lin
+METHOD=lee
 PRETRAINED=$BIOBERT
-MODEL_NAME=biobert_lin
+MODEL_NAME=biobert_lee
 export PYTHONPATH=$PWD
 
 CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 python3 /vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/tlbiore/main.py \
