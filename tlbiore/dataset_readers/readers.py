@@ -150,9 +150,9 @@ def convert_examples_to_features(examples, max_seq_len, tokenizer,
                     e2_marker_indices.append(idx + 1)  # account for CLS token, that will be added later on
 
             # Make sure that we have both the start and end markers
-            if len(e1_marker_indices) % 2 == 0:
+            if len(e1_marker_indices) % 2 != 0:
                 raise Exception("Error with missing markers $ for e1: {}".format(tokens))
-            if len(e2_marker_indices) % 2 == 0:
+            if len(e2_marker_indices) % 2 != 0:
                 raise Exception("Error with missing markers # for e2: {}".format(tokens))
 
             # Collect indices of all the entity parts
