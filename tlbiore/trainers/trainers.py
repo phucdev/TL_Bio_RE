@@ -7,10 +7,15 @@ import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from transformers import BertConfig, AdamW, get_linear_schedule_with_warmup
 
-from tlbiore.models.models import RBERT
+from tlbiore.models.models import RBERT, BertForSequenceClassification
 from tlbiore.utils import set_seed, write_prediction, compute_metrics, get_label
 
 logger = logging.getLogger(__name__)
+
+models = {
+    "rbert": RBERT,
+    "simple": BertForSequenceClassification
+}
 
 
 class Trainer(object):
@@ -26,7 +31,7 @@ class Trainer(object):
 
         self.bert_config = BertConfig.from_pretrained(args.pretrained_model_name, num_labels=self.num_labels,
                                                       finetuning_task=args.task)
-        self.model = RBERT(self.bert_config, args)
+        self.model = models[args.model](self.bert_config, args)
 
         # GPU or CPU
         self.device = torch.device('cuda:0}') if torch.cuda.is_available() and not args.no_cuda else "cpu"
@@ -75,12 +80,18 @@ class Trainer(object):
             for step, batch in enumerate(epoch_iterator):
                 self.model.train()
                 batch = tuple(t.to(self.device) for t in batch)  # GPU or CPU
-                inputs = {'input_ids': batch[0],
-                          'attention_mask': batch[1],
-                          'token_type_ids': batch[2],
-                          'labels': batch[3],
-                          'e1_mask': batch[4],
-                          'e2_mask': batch[5]}
+                if self.args.use_positional_markers or self.args.model == "simple":
+                    inputs = {'input_ids': batch[0],
+                              'attention_mask': batch[1],
+                              'token_type_ids': batch[2],
+                              'labels': batch[3],
+                              'e1_mask': batch[4],
+                              'e2_mask': batch[5]}
+                else:
+                    inputs = {'input_ids': batch[0],
+                              'attention_mask': batch[1],
+                              'token_type_ids': batch[2],
+                              'labels': batch[3]}
                 outputs = self.model(**inputs)
                 loss = outputs[0]
 
@@ -139,12 +150,18 @@ class Trainer(object):
         for batch in tqdm(eval_dataloader, desc="Evaluating"):
             batch = tuple(t.to(self.device) for t in batch)
             with torch.no_grad():
-                inputs = {'input_ids': batch[0],
-                          'attention_mask': batch[1],
-                          'token_type_ids': batch[2],
-                          'labels': batch[3],
-                          'e1_mask': batch[4],
-                          'e2_mask': batch[5]}
+                if self.args.use_positional_markers or self.args.model == "simple":
+                    inputs = {'input_ids': batch[0],
+                              'attention_mask': batch[1],
+                              'token_type_ids': batch[2],
+                              'labels': batch[3],
+                              'e1_mask': batch[4],
+                              'e2_mask': batch[5]}
+                else:
+                    inputs = {'input_ids': batch[0],
+                              'attention_mask': batch[1],
+                              'token_type_ids': batch[2],
+                              'labels': batch[3]}
                 outputs = self.model(**inputs)
                 tmp_eval_loss, logits = outputs[:2]
 
@@ -191,12 +208,18 @@ class Trainer(object):
         for batch in tqdm(eval_dataloader, desc="Predicting"):
             batch = tuple(t.to(self.device) for t in batch)
             with torch.no_grad():
-                inputs = {'input_ids': batch[0],
-                          'attention_mask': batch[1],
-                          'token_type_ids': batch[2],
-                          'labels': batch[3],
-                          'e1_mask': batch[4],
-                          'e2_mask': batch[5]}
+                if self.args.use_positional_markers or self.args.model == "simple":
+                    inputs = {'input_ids': batch[0],
+                              'attention_mask': batch[1],
+                              'token_type_ids': batch[2],
+                              'labels': batch[3],
+                              'e1_mask': batch[4],
+                              'e2_mask': batch[5]}
+                else:
+                    inputs = {'input_ids': batch[0],
+                              'attention_mask': batch[1],
+                              'token_type_ids': batch[2],
+                              'labels': batch[3]}
                 outputs = self.model(**inputs)
                 _, logits = outputs[:2]
             nb_eval_steps += 1
@@ -233,7 +256,8 @@ class Trainer(object):
         try:
             self.bert_config = BertConfig.from_pretrained(self.args.model_dir)
             logger.info("***** Bert config loaded *****")
-            self.model = RBERT.from_pretrained(self.args.model_dir, config=self.bert_config, args=self.args)
+            self.model = models[self.args.model].from_pretrained(self.args.model_dir, config=self.bert_config,
+                                                                 args=self.args)
             self.model.to(self.device)
             logger.info("***** Model Loaded *****")
         except Exception:

@@ -52,6 +52,7 @@ if __name__ == '__main__':
     parser.add_argument("--pred_file", default="predict.tsv", type=str, help="Predictions file")
     parser.add_argument("--label_file", default="label.txt", type=str, help="Label file")
 
+    parser.add_argument("--model", default="rbert", required=False, help="Model name")
     parser.add_argument("--pretrained_model_name", default="bert-base-uncased", required=False,
                         help="Pretrained model name")
 
