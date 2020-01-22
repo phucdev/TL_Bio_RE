@@ -35,13 +35,13 @@ transformers bert \
 ```
 Our approach was to save `pytorch_model.bin`, `bert_config.json` and `vocab.txt` to a new directory `biobert_v1.1._pubmed_pytorch`. We had to rename `bert_config.json` as `config.json` to be able to load it with the `transformers` package.
 
-## Download SciBERT
+### Download SciBERT
 
 Download SciBERT: [https://github.com/allenai/scibert](https://github.com/allenai/scibert)
 
 We have chosen [SciBERT Scivocab Cased](https://s3-us-west-2.amazonaws.com/ai2-s2-research/scibert/huggingface_pytorch/scibert_scivocab_cased.tar) (PyTorch HuggingFace) because BioBERT is based on BERT cased.
 
-## BERT
+### BERT
 
 No need to manually download the original BERT. The Hugging Face Transformers code will automatically handle that, when we load the model with `BertModel.from_pretrained('bert-base-cased', config=bert_config)`.
 
