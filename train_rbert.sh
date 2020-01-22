@@ -5,6 +5,8 @@ SCIBERT=/vol/fob-vol6/nebenf13/truongph/Models/scibert_scivocab_cased_pytorch
 METHOD=ali
 PRETRAINED=$BIOBERT
 MODEL_NAME=biobert_ali
+CWD=/vol/fob-vol6/nebenf13/truongph/TL_BIORE
+export PYTHONPATH=$PWD
 
 CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=3 python3 /vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/tlbiore/main.py \
   --do_train \

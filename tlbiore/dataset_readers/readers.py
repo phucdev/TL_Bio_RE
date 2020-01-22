@@ -3,15 +3,11 @@ import json
 import copy
 import os
 import logging
-from typing import List, Dict
 
 import torch
 from torch.utils.data import TensorDataset
 
-try:
-    from tlbiore.utils import get_label
-except ImportError:
-    from utils import get_label
+from tlbiore.utils import get_label
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -57,13 +53,15 @@ class InputFeatures(object):
     """
 
     def __init__(self, input_ids, attention_mask, token_type_ids, label_id,
-                 e1_mask, e2_mask):
+                 e1_mask=None, e2_mask=None):
         self.input_ids = input_ids
         self.attention_mask = attention_mask
         self.token_type_ids = token_type_ids
         self.label_id = label_id
-        self.e1_mask = e1_mask
-        self.e2_mask = e2_mask
+        if not e1_mask:
+            self.e1_mask = e1_mask
+        if not e2_mask:
+            self.e2_mask = e2_mask
 
     def __repr__(self):
         return str(self.to_json_string())
@@ -140,22 +138,24 @@ def convert_examples_to_features(examples, max_seq_len, tokenizer,
 
         tokens = tokenizer.tokenize(example.sentence)
 
-        e1_marker_indices = []
-        e2_marker_indices = []
+        e1_marker_pairs = None
+        e2_marker_pairs = None
+        if use_positional_markers:
+            e1_marker_indices = []
+            e2_marker_indices = []
+            for idx, token in enumerate(tokens):
+                if token == "$":
+                    e1_marker_indices.append(idx + 1)  # account for CLS token, that will be added later on
+                elif token == "#":
+                    e2_marker_indices.append(idx + 1)  # account for CLS token, that will be added later on
 
-        for idx, token in enumerate(tokens):
-            if token == "$":
-                e1_marker_indices.append(idx + 1)  # account for CLS token, that will be added later on
-            elif token == "#":
-                e2_marker_indices.append(idx + 1)  # account for CLS token, that will be added later on
+            # Make sure that we have both the start and end markers
+            assert len(e1_marker_indices) % 2 == 0, "Error with missing markers $ for e1: {}".format(tokens)
+            assert len(e2_marker_indices) % 2 == 0, "Error with missing markers # for e2: {}".format(tokens)
 
-        # Make sure that we have both the start and end markers
-        assert len(e1_marker_indices) % 2 == 0, "Error with missing markers $ for e1: {}".format(tokens)
-        assert len(e2_marker_indices) % 2 == 0, "Error with missing markers # for e2: {}".format(tokens)
-
-        # Collect indices of all the entity parts
-        e1_marker_pairs = zip(e1_marker_indices[::2], e1_marker_indices[1::2])
-        e2_marker_pairs = zip(e2_marker_indices[::2], e2_marker_indices[1::2])
+            # Collect indices of all the entity parts
+            e1_marker_pairs = zip(e1_marker_indices[::2], e1_marker_indices[1::2])
+            e2_marker_pairs = zip(e2_marker_indices[::2], e2_marker_indices[1::2])
 
         # Account for [CLS] and [SEP] with "- 2".
         if add_sep_token:
@@ -216,16 +216,24 @@ def convert_examples_to_features(examples, max_seq_len, tokenizer,
             logger.info("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
             logger.info("token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
             logger.info("label: %s (id = %d)" % (example.label, label_id))
-            logger.info("e1_mask: %s" % " ".join([str(x) for x in e1_mask]))
-            logger.info("e2_mask: %s" % " ".join([str(x) for x in e2_mask]))
+            if use_positional_markers:
+                logger.info("e1_mask: %s" % " ".join([str(x) for x in e1_mask]))
+                logger.info("e2_mask: %s" % " ".join([str(x) for x in e2_mask]))
 
-        features.append(
-            InputFeatures(input_ids=input_ids,
-                          attention_mask=attention_mask,
-                          token_type_ids=token_type_ids,
-                          label_id=label_id,
-                          e1_mask=e1_mask,
-                          e2_mask=e2_mask))
+        if use_positional_markers:
+            features.append(
+                InputFeatures(input_ids=input_ids,
+                              attention_mask=attention_mask,
+                              token_type_ids=token_type_ids,
+                              label_id=label_id,
+                              e1_mask=e1_mask,
+                              e2_mask=e2_mask))
+        else:
+            features.append(
+                InputFeatures(input_ids=input_ids,
+                              attention_mask=attention_mask,
+                              token_type_ids=token_type_ids,
+                              label_id=label_id))
 
     return features
 
@@ -261,11 +269,18 @@ def load_and_cache_examples(args, tokenizer, mode: str):
     all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
     all_attention_mask = torch.tensor([f.attention_mask for f in features], dtype=torch.long)
     all_token_type_ids = torch.tensor([f.token_type_ids for f in features], dtype=torch.long)
-    all_e1_mask = torch.tensor([f.e1_mask for f in features], dtype=torch.long)  # add e1 mask
-    all_e2_mask = torch.tensor([f.e2_mask for f in features], dtype=torch.long)  # add e2 mask
+    all_e1_mask = None
+    all_e2_mask = None
+    if args.use_positional_markers:
+        all_e1_mask = torch.tensor([f.e1_mask for f in features], dtype=torch.long)  # add e1 mask
+        all_e2_mask = torch.tensor([f.e2_mask for f in features], dtype=torch.long)  # add e2 mask
 
     all_label_ids = torch.tensor([f.label_id for f in features], dtype=torch.long)
 
-    dataset = TensorDataset(all_input_ids, all_attention_mask,
-                            all_token_type_ids, all_label_ids, all_e1_mask, all_e2_mask)
+    if args.use_positional_markers:
+        dataset = TensorDataset(all_input_ids, all_attention_mask,
+                                all_token_type_ids, all_label_ids, all_e1_mask, all_e2_mask)
+    else:
+        dataset = TensorDataset(all_input_ids, all_attention_mask,
+                                all_token_type_ids, all_label_ids)
     return dataset

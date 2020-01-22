@@ -1,13 +1,8 @@
 import argparse
 
-try:
-    from tlbiore.trainers.trainers import Trainer
-    from tlbiore.utils import init_logger, load_tokenizer
-    from tlbiore.dataset_readers.readers import load_and_cache_examples
-except ImportError:
-    from trainers.trainers import Trainer
-    from utils import init_logger, load_tokenizer
-    from dataset_readers.readers import load_and_cache_examples
+from tlbiore.trainers.trainers import Trainer
+from tlbiore.utils import init_logger, load_tokenizer
+from tlbiore.dataset_readers.readers import load_and_cache_examples
 
 
 def main(args):
@@ -90,5 +85,5 @@ if __name__ == '__main__':
     parser.add_argument("--no_cuda", action="store_true", help="Avoid using CUDA when available")
     parser.add_argument("--add_sep_token", action="store_true", help="Add [SEP] token at the end of the sentence")
 
-    args = parser.parse_args()
-    main(args)
+    arguments = parser.parse_args()
+    main(arguments)

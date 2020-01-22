@@ -6,6 +6,7 @@ METHOD=ali
 PRETRAINED=$BIOBERT
 MODEL_NAME=biobert_ali
 OUTPUT_DIR=ali/biobert
+export PYTHONPATH=$PWD
 
 CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=2 python3 /vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/tlbiore/main.py \
   --do_pred \

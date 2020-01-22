@@ -7,12 +7,8 @@ import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from transformers import BertConfig, AdamW, get_linear_schedule_with_warmup
 
-try:
-    from tlbiore.models.models import RBERT
-    from tlbiore.utils import set_seed, write_prediction, compute_metrics, get_label
-except ImportError:
-    from models.models import RBERT
-    from utils import set_seed, write_prediction, compute_metrics, get_label
+from tlbiore.models.models import RBERT
+from tlbiore.utils import set_seed, write_prediction, compute_metrics, get_label
 
 logger = logging.getLogger(__name__)
 

@@ -82,3 +82,39 @@ class RBERT(BertPreTrainedModel):
             outputs = (loss,) + outputs
 
         return outputs  # (loss), logits, (hidden_states), (attentions)
+
+
+class BertForSequenceClassification(BertPreTrainedModel):
+    def __init__(self, bert_config, args):
+        super(BertForSequenceClassification, self).__init__(bert_config)
+        self.bert = BertModel.from_pretrained(args.pretrained_model_name, config=bert_config)  # Load pretrained bert
+
+        self.num_labels = bert_config.num_labels
+        # self.cls_fc_layer = FCLayer(bert_config.hidden_size, bert_config.hidden_size, args.dropout_rate)
+        self.label_classifier = FCLayer(bert_config.hidden_size, bert_config.num_labels, args.dropout_rate,
+                                        use_activation=False)
+
+    def forward(self, input_ids, attention_mask, token_type_ids, labels):
+        # sequence_output, pooled_output, (hidden_states), (attentions)
+        outputs = self.bert(input_ids, attention_mask=attention_mask,
+                            token_type_ids=token_type_ids)
+        pooled_output = outputs[1]  # [CLS]
+
+        # Dropout -> tanh -> fc_layer
+        # pooled_output = self.cls_fc_layer(pooled_output)
+        logits = self.label_classifier(pooled_output)
+
+        outputs = (logits,) + outputs[2:]  # add hidden states and attention if they are here
+
+        # Softmax
+        if labels is not None:
+            if self.num_labels == 1:
+                loss_fct = nn.MSELoss()
+                loss = loss_fct(logits.view(-1), labels.view(-1))
+            else:
+                loss_fct = nn.CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+            outputs = (loss,) + outputs
+
+        return outputs  # (loss), logits, (hidden_states), (attentions)
