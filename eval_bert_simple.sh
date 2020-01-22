@@ -13,6 +13,7 @@ CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 python3 /vol/fob-vol6/nebenf
   --data_dir=/vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/data/ppi_hu/$METHOD \
   --pretrained_model_name=$PRETRAINED \
   --model_dir=/vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/models/$MODEL_NAME \
+  --model_name=$MODEL_NAME \
   --max_seq_len=286 \
   --batch_size=16 \
   --model=simple \

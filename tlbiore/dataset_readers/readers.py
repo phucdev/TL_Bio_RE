@@ -245,7 +245,7 @@ def load_and_cache_examples(args, tokenizer, mode: str):
     processor = PPIDatasetReader(args)  # or make it variable
 
     # Load data features from cache or dataset file
-    cached_features_file = os.path.join(args.data_dir, 'cached_{}_{}'.format(args.task, mode))
+    cached_features_file = os.path.join(args.data_dir, 'cached_{}_{}_{}'.format(args.task, args.model_name, mode))
     if os.path.exists(cached_features_file):
         logger.info("Loading features from cached file %s", cached_features_file)
         features = torch.load(cached_features_file)
