@@ -68,6 +68,20 @@ In addition to the CLS token (pooled output for the whole sentence) they use the
 
 Use the `train_rbert.sh` script to train the RBERT model.
 
+Our training parameters are as follows: 
+
+| Parameter           | Value |
+|---------------------|-------|
+| Batch size          | 16    |
+| Max sequence length\* | 286   |
+| Learning rate       | 2e-5  |
+| Number of epochs    | 5     |
+| Dropout rate        | 0.1   |
+
+\*Note: Corpora analysis yielded a maximum sequence length of `281` after BERT-tokenization. We chose the value `286` to allow slack.
+
+![Unknown](https://user-images.githubusercontent.com/11077393/72663484-7fab7280-39f3-11ea-8ad3-e7b9213394a4.png)
+
 ### Evaluation and Predictions
 Evaluation is done at the end of the training automatically, because of the `--do_eval` flag.
 If you only want to do evaluation, you can remove that flag or use the `eval_rbert.sh` script. It simply loads a model and evaluates it on the test data.
