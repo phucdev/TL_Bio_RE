@@ -162,7 +162,7 @@ def train_dev_test_split(object_list, split_ratio=(0.8, 0.1, 0.1), seed=2018):
         return train, dev, test
     else:
         # TODO: add checks that train, dev, test are lists of documents or sentences
-        train_examples = pd.concat([elem.get_examples() for elem in train]).sample(frac=1).reset_index(drop=True)
+        train_examples = pd.concat([elem.get_examples() for elem in train]).reset_index(drop=True)
         dev_examples = pd.concat([elem.get_examples() for elem in dev]).reset_index(drop=True)
         test_examples = pd.concat([elem.get_examples() for elem in test]).reset_index(drop=True)
 
