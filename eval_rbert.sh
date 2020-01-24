@@ -7,16 +7,16 @@ PRETRAINED=$BIOBERT
 MODEL_NAME=biobert_ali
 export PYTHONPATH=$PWD
 
-CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 python3 /vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/tlbiore/main.py \
+CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 python3 $PWD/tlbiore/main.py \
   --do_eval \
   --task=ppi \
-  --data_dir=/vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/data/ppi_hu/$METHOD \
+  --data_dir=$PWD/data/ppi_hu/$METHOD \
   --pretrained_model_name=$PRETRAINED \
-  --model_dir=/vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/models/$MODEL_NAME \
+  --model_dir=$PWD/models/$MODEL_NAME \
   --model_name=$MODEL_NAME \
   --model=rbert \
   --max_seq_len=286 \
   --batch_size=16 \
   --num_train_epochs=5 \
   --no_lower_case \
-  --label_file=/vol/fob-vol6/nebenf13/truongph/TL_Bio_RE/data/ppi_hu/labels.txt
+  --label_file=$PWD/data/ppi_hu/labels.txt
