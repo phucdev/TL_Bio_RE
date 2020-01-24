@@ -1,5 +1,5 @@
+tqdm
 transformers
-allennlp
 scikit-learn
 numpy
 overrides

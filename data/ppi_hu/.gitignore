@@ -1,0 +1,10 @@
+# .gitignore sample
+###################
+
+# Ignore all files in this dir...
+ali/
+lee/
+lin/
+
+# ... except for this one.
+!.gitignore

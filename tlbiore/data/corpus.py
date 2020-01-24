@@ -32,7 +32,7 @@ class Entity:
         for span in self.char_offset.split(','):
             limits = span.split('-')
             start = int(limits[0])
-            end = int(limits[1])+1
+            end = int(limits[1]) + 1
             spans.append(Span(start, end))
         return spans
 
@@ -46,7 +46,7 @@ class Pair:
         self.e1: Entity = pair_attrib['e1']
         self.e2: Entity = pair_attrib['e2']
         if 'interaction' in pair_attrib.keys():
-            self.label = 1 if pair_attrib['interaction'] == 'True' else 0
+            self.label = pair_attrib['interaction']
         else:
             self.label = None
 
@@ -89,14 +89,14 @@ class Sentence:
         for pair in self.pairs:
             pair_id.append(pair.id)
             sentence.append(self.text)
-            label.append(pair.label)
+            if pair.label is not None:
+                label.append(pair.label)
             e1_span.append(self.get_entity(pair.e1).get_spans())
             e2_span.append(self.get_entity(pair.e2).get_spans())
         example_df = pd.DataFrame({'pair_id': pair_id, 'sentence': sentence,
                                    'e1_span': e1_span, 'e2_span': e2_span})
-        if None not in label:
+        if len(label) == len(sentence) and None not in label:
             example_df['label'] = label
-            example_df = example_df.astype({'label': int})
         return example_df
 
 
@@ -133,6 +133,9 @@ class Corpus:
         for document in self.documents:
             sentences.extend(document.get_sentences())
         return sentences
+
+    def get_documents(self):
+        return self.documents
 
     def get_examples(self):
         document_examples = [document.get_examples() for document in self.documents]

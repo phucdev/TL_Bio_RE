@@ -1,1 +1,0 @@
-from tlbiore.dataset_readers.readers import PPIDatasetReader
