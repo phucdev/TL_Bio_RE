@@ -22,9 +22,9 @@ Download BioBERT: [https://github.com/naver/biobert-pretrained](https://github.c
 
 We have chosen [BioBERT v1.1 (+ PubMed 1M)](https://drive.google.com/file/d/1R84voFKHfWV9xjzeLzWBbmY1uOMYpnyD/view). The archive contains TensorFlow checkpoints, the BERT configuration and the vocabulary.
 
-It is based on the original BERT implementation with TensorFlow from Google. Since we want to work with `huggingface`, we converted the Tensorflow checkpoint to a PyTorch model with the [`convert_tf_checkpoint_to_pytorch.py`](https://github.com/huggingface/transformers/blob/master/transformers/convert_tf_checkpoint_to_pytorch.py) function.
+It is based on the original BERT implementation with TensorFlow from Google. Since we want to work with `huggingface`, we converted the Tensorflow checkpoint to a PyTorch model.
 
-See: [https://github.com/huggingface/transformers/issues/457#issuecomment-518403170](https://github.com/huggingface/transformers/issues/457#issuecomment-518403170)
+Conversion based on: [https://github.com/huggingface/transformers/issues/457#issuecomment-518403170](https://github.com/huggingface/transformers/issues/457#issuecomment-518403170)
 
 You need to adjust the path to the directory where you saved BioBERT.
 ```shell
@@ -63,6 +63,7 @@ In addition, we implemented RBERT (based on the following repository: [https://g
 They add positional markers to the entities:
 - `$` to mark the start and end of the first entity
 - `#` to mark the start and end of the second entity
+
 In addition to the CLS token (pooled output for the whole sentence) they use the averaged representations for the entities for the classification.
 
 Use the `train_rbert.sh` script to train the RBERT model.
@@ -77,31 +78,31 @@ The `pred_rbert.sh` script loads a model and writes its prediction into .csv fil
 
 ## Results
 
-Our results on our train, dev, test split so far:
+Our results on our sentencewise train, dev, test split so far:
 
-## Lee (BertForSequenceClassification)
+### Lee (BertForSequenceClassification)
 
-| Pretrained Model    | Bert Cased Base    | BioBert            | SciBert Scivocab Cased | 
+| Pretrained Model    | Bert Cased Base    | BioBert Cased           | SciBert Scivocab Cased | 
 |-----------|--------------------|--------------------|------------------------|
-| Accuracy  | 0.8568479008947006 | 0.88093599449415   | 0.874741913282863      | 
-| Precision | 0.775081869135336  | 0.8182133621395136 | 0.811342401758725      | 
-| Recall    | 0.7617448960636621 | 0.7912584416440458 | 0.7715647677087265     | 
-| F1        | 0.7680566811562171 | 0.8035358528760068 | 0.7887609036009842     | 
+| Accuracy  | 85.68 | 88.09   | 87.47      | 
+| Precision | 77.51  | 81.82 | 81.13      | 
+| Recall    | 76.17 | 79.13 | 77.16     | 
+| F1        | 76.81 | 80.35 | 78.88     | 
 
-## Lin (BertForSequenceClassification)
+### Lin (BertForSequenceClassification)
 
-| Pretrained Model   | Bert Cased Base    | BioBert            | SciBert Scivocab Cased |  
+| Pretrained Model   | Bert Cased Base    | BioBert Cased           | SciBert Scivocab Cased |  
 |-----------|--------------------|--------------------|------------------------|
-| Accuracy  | 0.8623537508602891 | 0.8761183757742601 | 0.8850653819683414     | 
-| Precision | 0.7837435249290232 | 0.8079061217728165 | 0.8318502602801943     | 
-| Recall    | 0.7730913045823071 | 0.7895791012757594 | 0.7845905165956579     | 
-| F1        | 0.778199092646529  | 0.7981632968050625 | 0.8047208038081902     | 
+| Accuracy  | 86.24 | 87.61 | 88.51     | 
+| Precision | 78.37 | 80.79 | 83.19     | 
+| Recall    | 77.31 | 78.96 | 78.46     | 
+| F1        | 77.82  | 79.82 | 80.47     | 
 
-## Alibaba (RBERT)
+### Alibaba (RBERT)
 
 | Pretrained Model   | Bert Cased Base    | BioBert Cased      | SciBert Scivocab Cased |
 |-----------|--------------------|--------------------|------------------------|
-| Accuracy  | 0.8719889883000688 | 0.8857536132140399 | 0.887130075705437      |
-| Precision | 0.80433342256726   | 0.8306143409926909 | 0.8298160924097644     |
-| Recall    | 0.7724905771178265 | 0.7902981765449633 | 0.7990738909762046     |
-| F1        | 0.7866352767303939 | 0.8078997502357468 | 0.8129552647442981     |
+| Accuracy  | 87.2 | 88.58 | 88.71      |
+| Precision | 80.43   | 83.06 | 82.98     |
+| Recall    | 77.25 | 79.03 | 79.91     |
+| F1        | 78.66 | 80.79 | 81.3     |
