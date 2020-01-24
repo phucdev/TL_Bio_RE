@@ -134,6 +134,9 @@ class Corpus:
             sentences.extend(document.get_sentences())
         return sentences
 
+    def get_documents(self):
+        return self.documents
+
     def get_examples(self):
         document_examples = [document.get_examples() for document in self.documents]
         return pd.concat(document_examples, sort=False).reset_index(drop=True)
