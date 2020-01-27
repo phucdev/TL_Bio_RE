@@ -5,12 +5,13 @@ Transfer Learning for Biomedical Relation Extraction Seminar. Applying BioBERT &
 
 Clone the repository, create a python virtual environment and install the requirements.
 
-Download the train and test data (AIMed, BioInfer).
+Download the train and test data (AIMed, BioInfer) into `TL_Bio_RE/data/raw`.
 Use `Korpusdaten-Bearbeiten.ipynb` to process corpora, do train-dev-test split and transform data according to the papers:
 
-- "A BERT-based Universal Model for Both Within- and Cross-sentence Clinical Temporal Relation Extraction" 
-- "Enriching Pre-trained Language Model with Entity Information for Relation Classification"
-- "BioBERT: a pre-trained biomedical language representation model for biomedical text mining"
+- Lee, Jinhyuk, et al. "BioBERT: pre-trained biomedical language representation model for biomedical text mining." _arXiv preprint arXiv:1901.08746_ (2019).
+- Lin, Chen, et al. "A BERT-based universal model for both within-and cross-sentence clinical temporal relation extraction." _Proceedings of the 2nd Clinical Natural Language Processing Workshop._ 2019.
+- Wu, Shanchan, and Yifan He. "Enriching pre-trained language model with entity information for relation classification." _Proceedings of the 28th ACM International Conference on Information and Knowledge Management._ 2019.
+
 
 (The text in the notebook is written in German, but the code is self-explanatory.)
 
@@ -84,9 +85,9 @@ Our training parameters are as follows:
 
 ### Evaluation and Predictions
 Evaluation is done at the end of the training automatically, because of the `--do_eval` flag.
-If you only want to do evaluation, you can remove that flag or use the `eval_rbert.sh` script. It simply loads a model and evaluates it on the test data.
+If you only want to do evaluation, you can remove the `--do_train` flag or use the `eval_rbert.sh` script. It simply loads a model and evaluates it on the test data.
 
-The `pred_rbert.sh` script loads a model and writes its prediction into .csv files (one for each corpora: AIMed, BioInfer) according to the specifications of the seminar:
+The `pred_rbert.sh` script loads a model and writes its predictions into .csv files (one for each corpora: AIMed, BioInfer) according to the specifications of the seminar:
 - Pair id
 - Label (True/False)
 
