@@ -13,7 +13,7 @@ Use `Korpusdaten-Bearbeiten.ipynb` to process corpora, do train-dev-test split a
 - Wu, Shanchan, and Yifan He. "Enriching pre-trained language model with entity information for relation classification." _Proceedings of the 28th ACM International Conference on Information and Knowledge Management._ 2019.
 
 
-(The text in the notebook is written in German, but the code is self-explanatory.)
+(The text in the notebook is written in German, but the code is self-explanatory. Also keep in mind that we combined the corpora to create our train-dev-test split. We could have instead created a split for each corpora separately.)
 
 ## Step 2: Download pretrained BERT models
 
@@ -93,31 +93,36 @@ The `pred_rbert.sh` script loads a model and writes its predictions into .csv fi
 
 ## Results
 
-Our results on our sentencewise train, dev, test split so far:
+Our results on our the hold-out sets:
 
-### Lee (BertForSequenceClassification)
+### AIMed
 
-| Pretrained Model    | Bert Cased Base    | BioBert Cased           | SciBert Scivocab Cased | 
-|-----------|--------------------|--------------------|------------------------|
-| Accuracy  | 85.68 | 88.09   | 87.47      | 
-| Precision | 77.51  | 81.82 | 81.13      | 
-| Recall    | 76.17 | 79.13 | 77.16     | 
-| F1        | 76.81 | 80.35 | 78.88     | 
+| Model           | ACC   | P     | R     | F1    |
+|-----------------|-------|-------|-------|-------|
+| Lee-Bert        | 86.9  | 58.7  | 84.8  | 69.4  |
+| Lee-SciBert     | 89.4  | 68.7  | 72.3  | 70.4  |
+| Lee-BioBert     | 90.2  | 67.2  | **85.9**  | **75.4**  |
+|                 |       |       |       |       |
+| Lin-Bert        | 89.6  | 67.4  | 78.0  | 72.3  |
+| Lin-SciBert     | 87.4  | 63.2  | 66.5  | 64.8  |
+| Lin-BioBert     | 87.8  | 61.8  | 78.0  | 69.0  |
+|                 |       |       |       |       |
+| WuHe-Bert       | 86.8  | 60.3  | 72.3  | 65.7  |
+| WuHe-SciBert    | **90.4**  | **71.1**  | 75.9  | 73.4  |
+| WuHe-BioBert    | 89.7  | 69.9  | 71.7  | 70.8  |
 
-### Lin (BertForSequenceClassification)
+### BioInfer
 
-| Pretrained Model   | Bert Cased Base    | BioBert Cased           | SciBert Scivocab Cased |  
-|-----------|--------------------|--------------------|------------------------|
-| Accuracy  | 86.24 | 87.61 | 88.51     | 
-| Precision | 78.37 | 80.79 | 83.19     | 
-| Recall    | 77.31 | 78.96 | 78.46     | 
-| F1        | 77.82  | 79.82 | 80.47     | 
-
-### Alibaba (RBERT)
-
-| Pretrained Model   | Bert Cased Base    | BioBert Cased      | SciBert Scivocab Cased |
-|-----------|--------------------|--------------------|------------------------|
-| Accuracy  | 87.2 | 88.58 | 88.71      |
-| Precision | 80.43   | 83.06 | 82.98     |
-| Recall    | 77.25 | 79.03 | 79.91     |
-| F1        | 78.66 | 80.79 | 81.3     |
+| Model           | ACC   | P     | R     | F1    |
+|-----------------|-------|-------|-------|-------|
+| Lee-Bert        | 85.0  | 74.1  | 65.9  | 69.7  |
+| Lee-SciBert     | 87.4  | 83.1  | 64.9  | 72.9  |
+| Lee-BioBert     | 86.8  | 81.3  | 64.5  | 71.9  |
+|                 |       |       |       |       |
+| Lin-Bert        | 84.8  | 71.9  | **68.7**  | 70.3  |
+| Lin-SciBert     | 87.1  | 82.7  | 64.0  | 72.1  |
+| Lin-BioBert     | 87.5  | 81.5  | 67.5  | 73.9  |
+|                 |       |       |       |       |
+| WuHe-Bert       | 84.8  | 75.4  | 62.6  | 68.4  |
+| WuHe-SciBert    | **87.8**  | 83.1  | 67.1  | **74.2**  |
+| WuHe-BioBert    | 86.5  | **83.9**  | 60.0  | 70.0  |
